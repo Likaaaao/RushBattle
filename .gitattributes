@@ -1,0 +1,44 @@
+# ============================================================
+#  Git LFS —— 二进制资产走 LFS，避免仓库体积失控
+#
+#  UE 的 .uasset / .umap 是二进制格式，git 无法做增量压缩：
+#  每改一次就完整存一份新副本。走 LFS 可以避免仓库迅速膨胀。
+#
+#  前提：本机需执行过 `git lfs install`（本机已装 git-lfs 3.6.1）。
+#  别人 clone 这个仓库时，也需要先装 git-lfs，否则拉下来的
+#  会是指针文件而不是真实资产。
+# ============================================================
+
+# ---------- Unreal 资产 ----------
+*.uasset  filter=lfs diff=lfs merge=lfs -text
+*.umap    filter=lfs diff=lfs merge=lfs -text
+
+# ---------- 3D 模型 ----------
+*.fbx     filter=lfs diff=lfs merge=lfs -text
+*.obj     filter=lfs diff=lfs merge=lfs -text
+*.blend   filter=lfs diff=lfs merge=lfs -text
+
+# ---------- 贴图 ----------
+*.png     filter=lfs diff=lfs merge=lfs -text
+*.jpg     filter=lfs diff=lfs merge=lfs -text
+*.jpeg    filter=lfs diff=lfs merge=lfs -text
+*.tga     filter=lfs diff=lfs merge=lfs -text
+*.bmp     filter=lfs diff=lfs merge=lfs -text
+*.psd     filter=lfs diff=lfs merge=lfs -text
+*.exr     filter=lfs diff=lfs merge=lfs -text
+*.hdr     filter=lfs diff=lfs merge=lfs -text
+*.tif     filter=lfs diff=lfs merge=lfs -text
+*.tiff    filter=lfs diff=lfs merge=lfs -text
+*.dds     filter=lfs diff=lfs merge=lfs -text
+
+# ---------- 音频 / 视频 ----------
+*.wav     filter=lfs diff=lfs merge=lfs -text
+*.mp3     filter=lfs diff=lfs merge=lfs -text
+*.ogg     filter=lfs diff=lfs merge=lfs -text
+*.flac    filter=lfs diff=lfs merge=lfs -text
+*.mp4     filter=lfs diff=lfs merge=lfs -text
+*.mov     filter=lfs diff=lfs merge=lfs -text
+
+# ---------- 字体 ----------
+*.ttf     filter=lfs diff=lfs merge=lfs -text
+*.otf     filter=lfs diff=lfs merge=lfs -text
