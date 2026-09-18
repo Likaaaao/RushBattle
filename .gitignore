@@ -62,3 +62,13 @@ Content/Free_Sounds_Pack/
 *.7z
 *.rar
 *.iso
+# ============================================================
+#  第三方模型资源包：不纳入版本控制
+#  M1911（手枪）/ Soviet_Assault_Rifle（AK47）/ SamuraiSword（武士刀）
+#  共 118 MB、78 个 LFS 对象，来自 Fab，授权不允许公开再分发。
+#  本地保留、编辑器里照常能用。
+#  还原：从 Fab 重新下载导入到 Content/ 下的同名目录。
+# ============================================================
+Content/M1911/
+Content/Fab/
+Content/SamuraiSword/
