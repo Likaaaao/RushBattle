@@ -8,6 +8,24 @@
 #include "AbilitySystemInterface.h"
 #include "RushBattleCharacter.generated.h"
 
+USTRUCT(BlueprintType)
+struct FCharacterAttributes
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
+	float MaxHealth = 100.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
+	float Health = 100.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
+	float Speed = 600.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
+	float MaxSpeed = 600.f;
+};
+
 UCLASS()
 class RUSHBATTLE_API ARushBattleCharacter : public ACharacter, public IAbilitySystemInterface
 {
@@ -21,6 +39,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AbilitySystem")
 	TArray<TSubclassOf<UGameplayAbility>> StartingAbilities;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attributes")
+	FCharacterAttributes InitialAttributes;
 public:
 	// Sets default values for this character's properties
 	ARushBattleCharacter();
@@ -45,5 +66,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AbilitySystem")
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent()const override;
 
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	void ApplyInitialAttributes();
 
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	FActiveGameplayEffectHandle ApplyEffectToSelfByCaller(
+		TSubclassOf<UGameplayEffect> EffectClass,
+		FGameplayTag DataTag,
+		float Magnitude,
+		float Level = 1.0f);
 };

@@ -21,6 +21,7 @@ void ARushBattleCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	GrantAbilities(StartingAbilities);
+
 }
 
 // Called every frame
@@ -69,3 +70,38 @@ UAbilitySystemComponent* ARushBattleCharacter::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
 }
+
+void ARushBattleCharacter::ApplyInitialAttributes()
+{
+	if (!AbilitySystemComponent || !AttributeSet) {
+		return;
+	}
+	AttributeSet->SetMaxHealth(InitialAttributes.MaxHealth);
+    AttributeSet->SetHealth(InitialAttributes.Health);
+    AttributeSet->SetMaxSpeed(InitialAttributes.MaxSpeed);
+    AttributeSet->SetSpeed(InitialAttributes.Speed);
+}
+
+
+
+FActiveGameplayEffectHandle ARushBattleCharacter::ApplyEffectToSelfByCaller(TSubclassOf<UGameplayEffect> EffectClass, FGameplayTag DataTag, float Magnitude, float Level)
+{
+	if (!AbilitySystemComponent || !EffectClass) {
+		return FActiveGameplayEffectHandle();
+	}
+	//context
+	FGameplayEffectContextHandle Context= AbilitySystemComponent->MakeEffectContext();
+	Context.AddSourceObject(this);
+
+	//Spec
+	FGameplayEffectSpecHandle SpecHandle=AbilitySystemComponent->MakeOutgoingSpec(EffectClass, Level, Context);
+	if (!SpecHandle.IsValid()) {
+		return FActiveGameplayEffectHandle();
+	}
+	//setByCaller
+	SpecHandle.Data->SetSetByCallerMagnitude(DataTag, Magnitude);
+	//apply
+	return AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+}
+
+
