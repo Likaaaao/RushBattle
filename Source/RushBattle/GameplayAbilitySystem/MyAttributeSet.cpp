@@ -34,23 +34,42 @@ void UMyAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, fl
     else if (Attribute == GetMaxSpeedAttribute()) {
         NewValue = FMath::Max(NewValue, 0.f);
     }
+    else if (Attribute == GetAmmoAttribute()) {
+        NewValue = FMath::Clamp(NewValue, 0.f, GetMaxAmmo());
+    }
+    else if (Attribute == GetMaxAmmoAttribute()) {
+        NewValue = FMath::Max(NewValue, 0.f);
+    }
+    else if (Attribute == GetEnergyAttribute()) {
+        NewValue = FMath::Clamp(NewValue, 0.f, GetMaxEnergy());
+    }
+    else if (Attribute == GetMaxEnergyAttribute()) {
+        NewValue = FMath::Max(NewValue, 0.f);
+    }
+    else if (Attribute == GetMoneyAttribute()) {
+        NewValue = FMath::Max(NewValue, 0.f);
+    }
 
 }
 
-void UMyAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) {
+//replicate
+void UMyAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
+{
     Super::PostGameplayEffectExecute(Data);
-    if (Data.EvaluatedData.Attribute == GetHealthAttribute()) {
-        SetHealth(GetHealth());
+
+    if (Data.EvaluatedData.Attribute == GetHealthAttribute())
+    {
+        SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
     }
-    else if (Data.EvaluatedData.Attribute == GetMaxHealthAttribute()) {
-        SetMaxHealth(GetMaxHealth());
+    else if (Data.EvaluatedData.Attribute == GetAmmoAttribute())
+    {
+        SetAmmo(FMath::Clamp(GetAmmo(), 0.f, GetMaxAmmo()));
     }
-    else if (Data.EvaluatedData.Attribute == GetSpeedAttribute()) {
-        SetSpeed(GetSpeed());
+    else if (Data.EvaluatedData.Attribute == GetEnergyAttribute())
+    {
+        SetEnergy(FMath::Clamp(GetEnergy(), 0.f, GetMaxEnergy()));
     }
-    else if (Data.EvaluatedData.Attribute == GetMaxSpeedAttribute()) {
-        SetMaxSpeed(GetMaxSpeed());
-    }
+
 }
 
 

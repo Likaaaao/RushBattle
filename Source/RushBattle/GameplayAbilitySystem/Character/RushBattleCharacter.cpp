@@ -80,6 +80,12 @@ void ARushBattleCharacter::ApplyInitialAttributes()
     AttributeSet->SetHealth(InitialAttributes.Health);
     AttributeSet->SetMaxSpeed(InitialAttributes.MaxSpeed);
     AttributeSet->SetSpeed(InitialAttributes.Speed);
+
+	AttributeSet->SetMaxAmmo(InitialAttributes.MaxAmmo);
+	AttributeSet->SetAmmo(InitialAttributes.Ammo);
+	AttributeSet->SetMaxEnergy(InitialAttributes.MaxEnergy);
+	AttributeSet->SetEnergy(InitialAttributes.Energy);
+	AttributeSet->SetMoney(InitialAttributes.Money);
 }
 
 
@@ -104,4 +110,48 @@ FActiveGameplayEffectHandle ARushBattleCharacter::ApplyEffectToSelfByCaller(TSub
 	return AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 }
 
+FActiveGameplayEffectHandle ARushBattleCharacter::DealDamageTo(
+	ARushBattleCharacter* Target,
+	TSubclassOf<UGameplayEffect> EffectClass,
+	FGameplayTag DataTag,
+	float Magnitude,
+	AActor* Causer)
+{
+	if (!Target || !Target->AbilitySystemComponent || !EffectClass)
+	{
+		return FActiveGameplayEffectHandle();
+	}
 
+
+	// Context
+	FGameplayEffectContextHandle Context =
+		Target->AbilitySystemComponent->MakeEffectContext();
+	Context.AddSourceObject(this);
+	Context.AddInstigator(this, Causer ? Causer : this);
+
+	// Spec
+	FGameplayEffectSpecHandle SpecHandle =
+		Target->AbilitySystemComponent->MakeOutgoingSpec(EffectClass, 1.0f, Context);
+
+	if (!SpecHandle.IsValid())
+	{
+		return FActiveGameplayEffectHandle();
+	}
+	// LastDamageInstigator
+	Target->LastDamageInstigator = this;
+
+	SpecHandle.Data->SetSetByCallerMagnitude(DataTag, Magnitude);
+
+	// apply
+	return Target->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+}
+
+void ARushBattleCharacter::NotifyKilledEnemy(ARushBattleCharacter* Victim)
+{
+	if (!Victim)
+	{
+		return;
+	}
+
+	OnKilledEnemy.Broadcast(Victim);
+}

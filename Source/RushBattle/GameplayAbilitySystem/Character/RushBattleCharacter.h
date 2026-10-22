@@ -7,12 +7,18 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "RushBattleCharacter.generated.h"
+class ARushBattleCharacter;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+	FOnKilledEnemy,
+	ARushBattleCharacter*, Victim);
 
 USTRUCT(BlueprintType)
 struct FCharacterAttributes
 {
 	GENERATED_BODY()
 
+	//	Basic Attributes
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
 	float MaxHealth = 100.f;
 
@@ -24,6 +30,23 @@ struct FCharacterAttributes
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
 	float MaxSpeed = 600.f;
+
+	//  Attributes|Resource 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
+	float Ammo = 120.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
+	float MaxAmmo = 120.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
+	float Energy = 100.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
+	float MaxEnergy = 100.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
+	float Money = 0.f;
 };
 
 UCLASS()
@@ -42,6 +65,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attributes")
 	FCharacterAttributes InitialAttributes;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	TObjectPtr<AActor> LastDamageInstigator;
+
+	UPROPERTY(BlueprintAssignable, Category = "Combat")
+	FOnKilledEnemy OnKilledEnemy;
 public:
 	// Sets default values for this character's properties
 	ARushBattleCharacter();
@@ -75,4 +104,16 @@ public:
 		FGameplayTag DataTag,
 		float Magnitude,
 		float Level = 1.0f);
+
+	UFUNCTION(BlueprintCallable, Category = "GAS|Combat")
+	FActiveGameplayEffectHandle DealDamageTo(
+		ARushBattleCharacter* Target,
+		TSubclassOf<UGameplayEffect> EffectClass,
+		FGameplayTag DataTag,
+		float Magnitude =1.0f,
+		AActor* Causer = nullptr);
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void NotifyKilledEnemy(ARushBattleCharacter* Victim);
+
 };

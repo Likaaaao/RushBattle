@@ -21,6 +21,7 @@
 - 第 3 个月底必须打完「阶段一 + 阶段二」，否则**砍功能，不砍美术时间**
 - 每项都写了「验收标准」，达不到就不算完成
 - **当前只推进标了 P0 的部分**，其余先冻住
+- **改动前先看[附录 E：项目结构](#附录-e项目结构2026-10-22-快照)** —— 里面是当前真实存在的类和资产（不是计划）
 
 ---
 
@@ -28,12 +29,14 @@
 
 | 阶段 | 内容 | 状态 | 当前优先级 |
 |---|---|---|---|
-| 阶段一 | 核心战斗地基 | **4/7 完成** | **P0（推进中）** |
-| 阶段二 | 肉鸽循环 | 未开始 | 暂缓 |
+| 阶段一 | 核心战斗地基 | **1~4 完成 · 5 暂停 · 6 进行中 · 7 部分完成** | **P0（推进中）** |
+| 阶段二 | 肉鸽循环 | 未开始 | 暂缓（玩法设计未定） |
 | 阶段三 | 流程与 UI | 未开始 | 暂缓 |
-| 跨阶段 | 手感 | 第一批完成 | 待 6 项完成后继续 |
+| 跨阶段 | 手感 | 第一批完成 | 待 6.6 完成后继续 |
 | 阶段四 | 美术与音效替换 | 未开始 | 暂缓 |
-| 阶段五 | 性能优化实战 | 未开始 | P1（阶段一收尾后开始） |
+| 阶段五 | 性能优化实战 | 未开始 | P1（6.x 完成后开始） |
+
+**当前唯一主线：6.2 → 6.5**（玩家资源属性 → Killer 追踪 → Ammo 属性化 → 敌人攻击走 GA）
 
 ---
 
@@ -201,130 +204,183 @@ SA_EnemySpawn3D（刷怪点）
 
 ---
 
-## [ ] 6. GAS 迁移收尾　**← P0，进行中**
+## [~] 6. GAS 体系完善　**← P0，当前主线**
 
-> 迁了约 70%。剩下的是「让数据真正驱动属性」和「把命名/目录理顺」。
+> 迁移已完成。现在做的是**玩家资源**和**敌人攻击**这两块的 GAS 化。
+> 玩法设计（敌人类型 ↔ 资源）暂时不动，先把地基铺好。
 
-### [ ] 6.1 `GE_InitStats`：把 DataAsset 的值灌进属性
+### 6.1 迁移收尾（已完成）
 
-**现状问题**：`MyAttributeSet` 构造函数里 `InitHealth(100)` 是写死的 → **所有敌人都是 100 血**，`DA_Enemy_*.MaxHealth` 没生效。
-
-**做法**：
-
-```
-GE_InitStats
-    Duration Policy = Instant
-    Modifiers:
-        Health      Op = Override   Magnitude = SetByCaller(Data.MaxHealth)
-        MaxHealth   Op = Override   Magnitude = SetByCaller(Data.MaxHealth)
-```
-
-敌人 `BeginPlay`（顺序不能乱）：
-
-```
-① Init Stats( MyAttributeSet )                       ← 先注册属性
-② Make Effect Context
-   → Make Outgoing Spec( GE_InitStats, 1.0, Context )
-   → Assign Tag Set By Caller Magnitude( Data.MaxHealth, EnemyData.MaxHealth )
-   → Apply Gameplay Effect Spec To Self
-③ Wait for Attribute Changed( Health )               ← 必须在 ②之后
-```
-
-**验收**：150 血的敌人和 80 血的敌人满血值不同；改 DataAsset 数值后重启 PIE 立刻生效，**不改任何蓝图**。
-
-### [ ] 6.2 玩家的初始属性也走同一套
-
-玩家的 `MaxHealth` 现在也是构造函数写死的。肉鸽里生命上限要能升级，所以迟早要挪。
-
-### [ ] 6.3 决定 `AttackDamage` 要不要进属性
-
-| 选择 | 后果 |
+| 项 | 说明 |
 |---|---|
-| **留 DataAsset** | 行为树 Task 读出来塞 `SetByCaller`，已经够数据驱动 |
-| **进属性** | 能被 "狂暴：攻击力 +50%" 这类 Effect 改 |
+| ✅ `GE_InitStats` + 敌人血量数据驱动 | `DA_Enemy_*.MaxHealth` 生效，改数值不改蓝图 |
+| ✅ 玩家初始属性 | C++ `FCharacterAttributes` + `ApplyInitialAttributes()`，蓝图调用 |
+| ✅ `AttackDamage` 归属 | **留 `BP_EnemyData`**（现在没有 Effect 会改它） |
+| ✅ 敌人技能数据驱动 | `BeginPlay` 自动 `GrantAbilities(StartingAbilities)` |
+| ✅ 通用 GE 施加函数 | `ApplyEffectToSelfByCaller(GE, Tag, Value)` —— 一个节点替代 8 个 |
+| ⏭️ 换弹蒙太奇 | 阻塞：需要手臂网格 + AnimBP + 蒙太奇资产 |
 
-**判断法则**：会被 GameplayEffect 改的 → 属性；只是配置的 → DataAsset。
+**属性初始化两条路（有意保留）**：
 
-### [ ] 6.4 敌人技能是否数据驱动（以后再做）
-
-```
-BP_EnemyData 加：Abilities : TArray<TSubclassOf<UGameplayAbility>>
-敌人 BeginPlay：遍历 → Give Ability
-```
-
-### [ ] 6.5 换弹蒙太奇（可选，需要动画管线）
-
-现在是 `AbilityTask_WaitDelay`。要做动画，得换成 `AbilityTask_PlayMontageAndWait`，前置是：手臂骨骼网格 + AnimBP + 蒙太奇资产。
+| | 数据源 | 方式 |
+|---|---|---|
+| 玩家 | `InitialAttributes`（Class Defaults） | `ApplyInitialAttributes()` 直设 |
+| 敌人 | `CurrentEnemyData.MaxHealth`（DataAsset） | `ApplyEffectToSelfByCaller(GE_InitStats, …)` |
 
 ---
 
-## [ ] 7. 项目整理与清理　**← P0，未开始**
+### [ ] 6.2 玩家：资源属性
 
-> 把过去两个月欠的账一次还掉。**改名在编辑器内做会自动修引用，越早越便宜。**
+**目标**：给 `UMyAttributeSet` 补上资源，让「打死黄敌人给弹」有地方落。
 
-### [ ] 7.1 命名欠账
-
-| 现在 | 改成 |
+| 属性 | 说明 |
 |---|---|
-| `MyAttributeSet` | `RushBattleAttributeSet` |
-| `GE_FireCooldoown` | `GE_FireCooldown` |
-| 文件夹 `GamepalyEffect` | `GameplayEffect` |
-| `UI_MainUi` | `WBP_MainUI` |
-| `IA_Number_1` / `IA_Number_2` | `IA_Weapon1` / `IA_Weapon2` |
-| `IA_Key_SwitchWeapon` | `IA_NextWeapon` |
-| `SA_EnemySpawn3D` | `BP_EnemySpawnPoint` |
-| 文件夹 `BluePointInterface` | `BlueprintInterface` |
-| 文件夹 `GameplayAbilitySystem` | `GAS`（可选） |
+| `Ammo` / `MaxAmmo` | 备弹（**int 语义，显示时 `FloorToInt`**） |
+| `Energy` / `MaxEnergy` | 能量（技能的消耗端） |
+| `Money` | 货币（成长层） |
 
-### [ ] 7.2 目录结构
+**要点**：
+
+- **必须有上限** —— 没有上限的资源不是资源，玩家永远不缺
+- `Ammo` 在 `PreAttributeChange` 里 `FloorToFloat`，避免出现 `33.7 发`
+- 加完后同步更新 `FCharacterAttributes`（玩家用）和 `BP_EnemyData`（敌人用）
+
+**验收**：`showdebug abilitysystem` 按 3 能看到这 5 个属性；`ApplyEffectToSelfByCaller` 能把它们改上去。
+
+---
+
+### [ ] 6.3 玩家：Killer 追踪
+
+**问题**：`GE_Damage` 只改血量，**没人记录"谁打的"** → 敌人死了不知道该奖励谁。
+
+**做法**：
+
+```cpp
+// ARushBattleCharacter
+UPROPERTY(BlueprintReadOnly, Category = "GAS")
+TObjectPtr<AActor> LastDamageInstigator;
+
+// BeginPlay 里绑定
+AbilitySystemComponent->OnGameplayEffectAppliedDelegateToSelf.AddUObject(
+    this, &ARushBattleCharacter::HandleEffectApplied);
+```
+
+**同时**：`ApplyEffectToSelfByCaller` 加 `Instigator` 参数，内部调 `Context.AddInstigator(Instigator, Causer)`。
+
+**验收**：敌人打玩家 → 玩家的 `LastDamageInstigator` = 那个敌人。
+
+---
+
+### [ ] 6.4 玩家：Ammo 从武器搬到属性
+
+**现状**：`BP_GunBase` 同时管 `CurrentAmmo`（弹匣）+ `ReserveAmmo`（备弹）。
 
 **目标**：
 
 ```
-Content/
-├─ Code/                  游戏逻辑
-│   ├─ Player/
-│   ├─ Weapon/
-│   ├─ Enemy/
-│   ├─ GAS/               GA / GE
-│   ├─ UI/
-│   └─ Input/
-├─ Assets/                第三方资源（gitignore）
-├─ Maps/
-└─ Test/                  测试资产，可整体删除
+角色属性   Ammo / MaxAmmo      ← 备弹（跨武器共享）
+武器       MagazineSize        ← 弹匣容量
+           CurrentAmmo         ← 弹匣内当前数（每把枪独立）
 ```
 
-**要处理的**：
-- [ ] `Enemy/Enemy/` 多出来的一层
-- [ ] `Player/Temp_Anim/` 临时动画目录 —— 整理成 `Weapon/Arms/` 或删
-- [ ] `Weapon/Gun/Data/` 与 `Weapon/Data/` 是否合并
-- [ ] `TestMap` 移入 `Maps/`
+**换弹逻辑改成**：
 
-### [ ] 7.3 死资产清理
+```
+需要   = MagazineSize - CurrentAmmo
+实际补 = Min( 需要, 角色 Ammo )
+CurrentAmmo += 实际补
+角色 Ammo   -= 实际补
+```
 
-| 资产 | 处理 |
+**要处理**：备弹不够时只补一部分，不报错、不卡住。
+
+**验收**：打空弹匣 → 换弹 → 角色 `Ammo` 减少 → 弹匣补满；备弹为 0 时换弹无效。
+
+---
+
+### [ ] 6.5 敌人：攻击走 GA（基础框架）
+
+**目标**：敌人攻击从「行为树 Task 里直接施加 GE」改成「**Task 触发 GA，GA 里执行攻击**」。
+
+**为什么要这样**：让敌人也受**冷却 GE、Tag 互斥、打断**管理。子类重写做不到这些。
+
+**结构**：
+
+```
+BTT_Attack（通用任务）
+    Target = 黑板.TargetActor
+    → BP_EnemyBase.Attack(Target)
+        → SendGameplayEvent( CurrentEnemyData.AttackEventTag, Payload.Target )
+
+GA_Enemy_RangedAttack
+    Ability Triggers: Gameplay Event = Event.Attack.Ranged
+    ActivateAbility
+        → 取目标
+        → 前摇（Wait Delay）
+        → 攻击（射线 / 球形检测 / Spawn 投射物）
+        → CommitAbility（冷却 GE）
+        → EndAbility
+```
+
+**关键**：行为树只负责「什么时候打」，不关心「怎么打」。**攻击方式由数据资产里的 Tag 决定。**
+
+**验收**：远程敌人在行为树下能通过 GA 打到你；冷却期间调 `Attack` 无效。
+
+---
+
+### [ ] 6.6 敌人：四种攻击方式（后续）
+
+| 攻击 | 实现要点 |
 |---|---|
-| `BP_HealthComponent` | **删除**（已不用） |
-| `GA_Test` | 删除或移入 `Test/` |
-| `BP_EnemyTest` / `DA_EnemyTest` | 移入 `Test/` |
-| `BP_Enemy_1`（旧版） | 检查引用后删 |
-| 空文件夹 / Redirector | `右键 → Fix Up Redirectors in Folder` |
+| **枪射击** | 复用 `BP_GunBase.PerformShot()`，和玩家 `GA_Fire` 同构 |
+| **近战** | `SphereOverlap` 前方 → 命中 ASC 施加 `GE_Damage`；**必须有前摇**，否则贴脸秒杀 |
+| **投掷物** | `SpawnActor(BP_Projectile)`，投射物自己飞 + 命中施加 GE |
+| **远程锁定** | 待定（追踪弹 / 锁定必中 / 持续照射，三种实现完全不同） |
 
-**检查方法**：右键资产 → `Reference Viewer`，确认没被引用再删。
+**投掷物**建议独立 Actor：`BP_Projectile` + `ProjectileMovementComponent` + `OnHit → 施加 GE → Destroy`。
 
-### [ ] 7.4 蓝图内部清理
+**加一种攻击 = 写一个 GA + 加一个 Tag + 数据里配一个 Tag，不改任何蓝图类。**
 
-- [ ] 删掉所有临时 `Print String`
-- [ ] `BP_GunBase` 里残留的 `Start Fire` / `Stop Fire`（如果已被 GA 取代）
-- [ ] `Apply Point Damage` / `Apply Damage` 残留节点
-- [ ] `My Blueprint` 里删除不再使用的变量
-- [ ] `.cpp` 的 include 用**裸文件名**（不要带目录前缀）
+---
 
-### [ ] 7.5 文档
+## [~] 7. 项目整理与清理　**← 部分完成，剩余跳过**
 
-- [x] `Docs/UE5肉鸽射击_框架清单.md` 放回仓库 —— 修复 DevLog README 的 5 个死链
-- [ ] 补开发日志：09-22、09-26、10-10 ~ 10-20
-- [ ] 检查 `Docs/DevLog/README.md` 索引与实际文件是否一致
+### [x] 7.1 命名欠账
+
+| 原 | 新 | 状态 |
+|---|---|---|
+| `IA_Number_1` / `IA_Number_2` | `IA_Weapon_1` / `IA_Weapon_2` | ✅ |
+| `IA_Key_SwitchWeapon` | `IA_NextWeapon` | ✅ |
+| `GE_FireCooldoown` | `GE_FireCooldown` | ✅ |
+| 文件夹 `GamepalyEffect` | `GameplayEffect` | ✅ |
+| `EnemyTag` | `E_EnemyTag` | ✅ |
+| `UI_MainUi` | `WBP_MainUI` | ✅ |
+| `DA_EnemyTest` | `DA_Enemy_Test` | ✅ |
+| 文件夹 `BluePointInterface` | — | ✅ 已删（`BI_Fire` 不再用） |
+| `MyAttributeSet` | ~~`RushBattleAttributeSet`~~ | ⏭️ **不改** —— C++ 改名会摧毁蓝图父类（见 10-20 日志） |
+| `SA_EnemySpawn3D` | ~~`BP_EnemySpawnPoint`~~ | ⏭️ 跳过 |
+
+### [~] 7.3 死资产清理
+
+| 资产 | 状态 |
+|---|---|
+| `BP_HealthComponent` | ✅ 已删 |
+| `BP_GunFireComponent` | ✅ 已删 |
+| `Player/Temp_Anim/` | ✅ 已删 |
+| `BP_Enemy_1` | ✅ 已删 |
+| `BP_Enemy_Health/Ammo/Energy` | ⚠️ 测试用，**玩法功能接完后再删** |
+| `DA_Enemy_Test` | ⚠️ 同上 |
+| `BP_GameMode` 的刷怪套件 | ⏭️ **删之前先搜 `HandleEnemyDeath` 有没有人调** |
+
+### ⏭️ 7.2 / 7.4 跳过
+
+目录结构（`Enemy/Enemy/` 合并等）和蓝图内部清理（临时 `Print String`）暂不动 —— 收益低于打扰成本。
+
+### [~] 7.5 文档
+
+- [x] 框架清单放回仓库，修好 5 个死链
+- [x] 附录 E：项目结构快照（2026-10-22）
+- [ ] 补开发日志：09-22、09-26、10-10 ~ 10-21
 
 ---
 
@@ -620,6 +676,8 @@ Content/
 | 9 | **`Delay` 不可打断** | 技能取消后回调仍执行 | 用 `AbilityTask_WaitDelay` |
 | 10 | **`InstancedPerExecution` 下靠"技能已激活"挡重复** | 挡不住 | 每次激活是新实例，**必须用 `Activation Owned Tags` + `Activation Blocked Tags`** |
 | 11 | **`Make Outgoing Spec` 的目标忘了接** | 默认是 `self`（不是 ASC）→ 静默失败 | 用攻击者的 ASC |
+| 12 | **`PreAttributeChange` 拦不住 GameplayEffect** | Health 扣成负数，UI 显示 `-66/100` | GE 改的是 Aggregator，**不经过 `Set`** → `PreAttributeChange` 不跑。必须在 `PostGameplayEffectExecute` 里 `SetXxx(Clamp(GetXxx(), 0, GetMaxXxx()))` 补一次 |
+| 13 | **改了 C++ 但没重新编译** | 代码明明改了，行为一点没变 | 关编辑器 → 删 `Binaries/` `Intermediate/` → 生成项目文件 → **重新生成**。编辑器开着时链接会 `LNK1104` 失败，但 VS 可能只给个警告 |
 
 ---
 
@@ -645,3 +703,241 @@ feat / fix / refactor / perf / docs / chore
 ```bash
 git status          # 确认没有 Content/Assets/ 的东西混进来
 ```
+
+---
+
+# 附录 E：项目结构（2026-10-22 快照）
+
+> **这是"现在真实存在的东西"，不是计划。**
+> 每完成一项大改动就更新一次这个附录。
+
+## E.1 C++ 层（`Source/RushBattle/`）
+
+### `ARushBattleCharacter : ACharacter, IAbilitySystemInterface`
+
+**玩家和敌人的共同基类。**
+
+```cpp
+// 组件（构造函数里 CreateDefaultSubobject）
+UAbilitySystemComponent*  AbilitySystemComponent;
+UMyAttributeSet*          AttributeSet;        // 自动注册，不需要 Init Stats
+
+// 配置（Class Defaults 里填）
+TArray<TSubclassOf<UGameplayAbility>> StartingAbilities;
+FCharacterAttributes                  InitialAttributes;
+    // { MaxHealth, Health, Speed, MaxSpeed }
+
+// 函数
+GrantAbilities(Abilities)          → BeginPlay 自动调用，批量 GiveAbility
+RemoveAbility(Handles)
+GetAbilitySystemComponent()        → 接口实现
+ApplyInitialAttributes()           → 直设属性，不走 GE
+ApplyEffectToSelfByCaller(         → 通用 GE 施加
+    EffectClass, DataTag, Magnitude, Level)
+```
+
+**`BeginPlay` 自动做**：`GrantAbilities(StartingAbilities)`。
+
+### `UMyAttributeSet : UAttributeSet`
+
+```cpp
+Health / MaxHealth
+Speed  / MaxSpeed          ← 目前空转（没接到 MaxWalkSpeed）
+
+PreAttributeChange()        ← clamp（Health 限制在 [0, MaxHealth]）
+PostGameplayEffectExecute()
+GetLifetimeReplicatedProps()  ← 单机项目用不上，可精简
+```
+
+## E.2 蓝图继承树
+
+```
+ACharacter
+└── ARushBattleCharacter (C++)
+    ├── BP_Player
+    └── BP_EnemyBase
+        ├── BP_Enemy_Melee        空手 · 近战
+        ├── BP_Enemy_Ranged       持 BP_GunBase · 远程
+        ├── BP_Enemy_Health       ⚠️ 测试用，待删
+        ├── BP_Enemy_Ammo         ⚠️ 测试用，待删
+        └── BP_Enemy_Energy       ⚠️ 测试用，待删
+
+AActor
+└── BP_GunBase                    武器（独立 Actor，挂到角色上）
+```
+
+### `BP_EnemyBase` 的变量
+
+| 变量 | 类型 | 作用 |
+|---|---|---|
+| `CurrentWeapon` | `BP_GunBase` | 近战敌人为**空** |
+| `CurrentEnemyData` | `BP_EnemyData` | 行为参数 + 血量 |
+| `EnemyTag` | `E_EnemyTag` | **打算用来决定掉什么资源，目前没人读** |
+
+### `BP_EnemyBase` 的函数
+
+```
+Init()                    初始化（血量 + 血条）
+UpdateHealthBar()
+WaitForAttributeChanged() 注册属性监听
+PlayHurtFeedback()        受击反馈入口
+```
+
+## E.3 数据资产与枚举
+
+```
+BP_WeaponData (PrimaryDataAsset) → DA_Pistol / DA_Rifle / DA_Shotgun
+
+BP_EnemyData  (PrimaryDataAsset) → DA_Enemy_Melee / DA_Enemy_Ranged
+                                   DA_Enemy_Test ⚠️ 测试用
+    字段：MaxHealth / AttackDamage / AttackRange / AttackCooldown / ...
+
+E_EnemyTag → Health / Ammo / Energy / Money      （资源类型）
+```
+
+## E.4 GAS 资产
+
+```
+GameplayAbility
+    GA_Fire                   开火（射速 = 冷却 GE）
+    GA_Reload                 换弹（AbilityTask_WaitDelay）
+
+GameplayEffect
+    GE_Damage                 Instant + SetByCaller(Data.Damage)
+    GE_FireCooldown           Duration + Target Tags(Cooldown.Fire)
+    GE_InitStats              Instant + SetByCaller(Data.MaxHealth)
+```
+
+**GameplayTag**（`Config/DefaultGameplayTags.ini`）：
+
+```
+Ability.Fire / Ability.Reload / Ability.Test
+Cooldown.Fire / Cooldown.Reload
+Data.Damage / Data.MaxHealth
+State.Firing / State.Reloading
+```
+
+## E.5 敌人 AI
+
+```
+AIC_Enemy                    行为树控制器
+BB_Enemy                     黑板
+
+BT_Enemy_Melee  → BTT_MeleeAttack
+BT_Enemy_Ranged → BTT_RangedAttack
+                  ├─ BTS_UpdateCombatRange    每 0.3s 刷新目标/距离
+                  └─ Start Fire / Stop Fire → BP_GunBase
+```
+
+敌人攻击**已走 GAS**：Task 内施加 `GE_Damage`，不再用 `Apply Damage`。
+
+## E.6 输入 / UI / 其它
+
+```
+输入
+    IMC_Game
+    IA_Move / Look / Fire / Jump / Sprint / Slide / Reload
+    IA_Weapon_1 / IA_Weapon_2 / IA_NextWeapon
+
+UI
+    WBP_MainUI                 主界面（HUD）
+    WBP_EnemyHealthBar         敌人头顶血条
+
+场景
+    SA_EnemySpawn3D            刷怪点
+
+BP_GameMode   ⚠️ 临时刷怪器，待删
+    ├── Enemies : Array<Actor>
+    ├── EnemyLimitCount : int
+    ├── BeginPlay → Set Timer(2s, Loop) → SpawnEnemy
+    ├── HandleEnemyDeath(Dead Actor) → Remove from Enemies
+    ├── Tick → Print Enemies.Length      ← 调试
+    └── RegisterEnemy / SpawnEnemy
+```
+
+## E.7 三条核心数据流
+
+### ① 开火
+
+```
+IA_Fire（BP_Player）
+    → Try Activate Ability( GA_Fire )
+        → CanFire()?               （冷却 Tag + 弹药）
+        → PerformShot()            （BP_GunBase）
+            → 射线检测
+            → CalculateFinalDamage()
+            → 目标 ASC → ApplyEffectToSelfByCaller( GE_Damage, Data.Damage, -伤害 )
+```
+
+### ② 受伤 / 死亡
+
+```
+GE_Damage 施加
+    → Health 属性下降
+    → Wait for Attribute Changed(Health) 触发
+        → UpdateHealthBar()
+        → Branch(NewValue <= 0)
+            → 死亡流程
+```
+
+### ③ 敌人攻击
+
+```
+AIC_Enemy → 行为树
+    → BTT_MeleeAttack / BTT_RangedAttack
+        → 目标 ASC → ApplyEffectToSelfByCaller( GE_Damage, Data.Damage, -AttackDamage )
+```
+
+## E.8 属性初始化：两条路并存（各自合理）
+
+| | 玩家 | 敌人 |
+|---|---|---|
+| 数据源 | `InitialAttributes`（Class Defaults） | `CurrentEnemyData.MaxHealth`（DataAsset） |
+| 调用 | `ApplyInitialAttributes()` | `ApplyEffectToSelfByCaller(GE_InitStats, Data.MaxHealth, …)` |
+| 方式 | 直接 `SetMaxHealth` | 走 GE |
+
+**为什么合理**：玩家只有一个 → 蓝图里填最直接；敌人有多种 → 集中在 DataAsset 配置；敌走 GE → 以后能在初始化时挂 GameplayCue。
+
+## E.9 当前缺口
+
+### 🔴 P0：资源玩法的地基是空的
+
+| # | 问题 |
+|---|---|
+| 1 | **`Ammo` / `Energy` / `Money` 三个属性不存在** → 「打死黄敌人给弹」没有地方加 |
+| 2 | **`EnemyTag` 没有任何逻辑读它** → 敌人死了只掉血，不掉资源 |
+| 3 | **Ammo 现在在 `BP_GunBase` 上**（武器的），不是角色属性 |
+
+**三条是同一件事**，顺序：
+
+```
+先定：Ammo 是「角色总弹药池」还是「每把枪独立」
+    ↓
+补属性：UMyAttributeSet 加 Ammo / Energy / Money
+    ↓
+建 GE：GE_Reward_Ammo / _Energy / _Money
+    ↓
+接死亡：Switch on EnemyTag → 施加对应 GE
+```
+
+### 🟡 P1：待清理
+
+| # | 项目 | 备注 |
+|---|---|---|
+| 4 | `BP_GameMode` 的刷怪套件 | **删之前先搜 `HandleEnemyDeath` 有没有人调** |
+| 5 | `BP_Enemy_Health/Ammo/Energy` | 测试用，功能接完就能删 |
+| 6 | `DA_Enemy_Test` | 同上 |
+
+### 🟢 P2：设计上以后要处理
+
+| # | 项目 | 什么时候 |
+|---|---|---|
+| 7 | `CurrentWeapon : BP_GunBase` 类型过窄 | 加近战 / 能量武器时 |
+| 8 | `Speed` / `MaxSpeed` 空转 | 做减速 / Buff 时接到 `MaxWalkSpeed` |
+| 9 | `UMyAttributeSet` 的复制代码 | 随时可精简（单机不需要） |
+| 10 | `GE_InitStats` 只设了 Health，没设 Speed | 敌人要用 Speed 属性时补 |
+
+## E.10 一句话
+
+> **战斗地基完整，GAS 迁移完成，数据驱动成型。**
+> **但「敌人类型 ↔ 资源」这个核心玩法，卡在「属性不存在」这一步 —— 一点都还没开始。**
