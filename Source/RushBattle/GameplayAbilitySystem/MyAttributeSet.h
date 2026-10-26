@@ -32,26 +32,6 @@ public:
 	FGameplayAttributeData MaxSpeed;
 	ATTRIBUTE_ACCESSORS_BASIC(UMyAttributeSet, MaxSpeed)
 
-	// no replicated
-	UPROPERTY(BlueprintReadOnly, Category = "Attributes")
-	FGameplayAttributeData Ammo;
-	ATTRIBUTE_ACCESSORS_BASIC(UMyAttributeSet, Ammo)
-
-	UPROPERTY(BlueprintReadOnly, Category = "Attributes")
-	FGameplayAttributeData MaxAmmo;
-	ATTRIBUTE_ACCESSORS_BASIC(UMyAttributeSet, MaxAmmo)
-
-	UPROPERTY(BlueprintReadOnly, Category = "Attributes")
-	FGameplayAttributeData Energy;
-	ATTRIBUTE_ACCESSORS_BASIC(UMyAttributeSet, Energy)
-
-	UPROPERTY(BlueprintReadOnly, Category = "Attributes")
-	FGameplayAttributeData MaxEnergy;
-	ATTRIBUTE_ACCESSORS_BASIC(UMyAttributeSet, MaxEnergy)
-
-	UPROPERTY(BlueprintReadOnly, Category = "Attributes")
-	FGameplayAttributeData Money;
-	ATTRIBUTE_ACCESSORS_BASIC(UMyAttributeSet, Money)
 
 public:
 	UFUNCTION()

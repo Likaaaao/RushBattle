@@ -81,11 +81,6 @@ void ARushBattleCharacter::ApplyInitialAttributes()
     AttributeSet->SetMaxSpeed(InitialAttributes.MaxSpeed);
     AttributeSet->SetSpeed(InitialAttributes.Speed);
 
-	AttributeSet->SetMaxAmmo(InitialAttributes.MaxAmmo);
-	AttributeSet->SetAmmo(InitialAttributes.Ammo);
-	AttributeSet->SetMaxEnergy(InitialAttributes.MaxEnergy);
-	AttributeSet->SetEnergy(InitialAttributes.Energy);
-	AttributeSet->SetMoney(InitialAttributes.Money);
 }
 
 

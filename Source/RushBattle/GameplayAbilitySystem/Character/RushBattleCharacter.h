@@ -31,22 +31,6 @@ struct FCharacterAttributes
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
 	float MaxSpeed = 600.f;
 
-	//  Attributes|Resource 
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
-	float Ammo = 120.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
-	float MaxAmmo = 120.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
-	float Energy = 100.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
-	float MaxEnergy = 100.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
-	float Money = 0.f;
 };
 
 UCLASS()
@@ -105,7 +89,7 @@ public:
 		float Magnitude,
 		float Level = 1.0f);
 
-	UFUNCTION(BlueprintCallable, Category = "GAS|Combat")
+	UFUNCTION(BlueprintCallable, Category = "GAS")
 	FActiveGameplayEffectHandle DealDamageTo(
 		ARushBattleCharacter* Target,
 		TSubclassOf<UGameplayEffect> EffectClass,

@@ -229,7 +229,7 @@ SA_EnemySpawn3D（刷怪点）
 
 ---
 
-### [ ] 6.2 玩家：资源属性
+### [x] 6.2 玩家：资源属性
 
 **目标**：给 `UMyAttributeSet` 补上资源，让「打死黄敌人给弹」有地方落。
 
@@ -249,7 +249,7 @@ SA_EnemySpawn3D（刷怪点）
 
 ---
 
-### [ ] 6.3 玩家：Killer 追踪
+### [x] 6.3 玩家：Killer 追踪
 
 **问题**：`GE_Damage` 只改血量，**没人记录"谁打的"** → 敌人死了不知道该奖励谁。
 
@@ -271,7 +271,7 @@ AbilitySystemComponent->OnGameplayEffectAppliedDelegateToSelf.AddUObject(
 
 ---
 
-### [ ] 6.4 玩家：Ammo 从武器搬到属性
+### [x] 6.4 玩家：Ammo 从武器搬到属性
 
 **现状**：`BP_GunBase` 同时管 `CurrentAmmo`（弹匣）+ `ReserveAmmo`（备弹）。
 
@@ -298,7 +298,26 @@ CurrentAmmo += 实际补
 
 ---
 
-### [ ] 6.5 敌人：攻击走 GA（基础框架）
+### [x] 6.4b 资源点机制（击杀获得 → 按键兑换）
+
+**设计变更**：击杀敌人**不再直接加资源**，而是掉一个「资源点」，由玩家按键消耗点数换资源。
+
+| 机制 | 实现 |
+|---|---|
+| 点数属性 | `HealthPoint / MaxHealthPoint / AmmoPoint / MaxAmmoPoint / EnergyPoint / MaxEnergyPoint` |
+| 获得 | 敌人死亡 → `OnKilledEnemy` → `Switch on EnemyTag` → `GE_Add_*Point`（+1） |
+| **上限** | 做成独立属性 —— 以后升级 / 词条用 GE 改 `Max*Point` 即可，**不用改代码** |
+| 兑换 | 按键 → 检查点数 ≥ 1 → 施加 `GE_Add_*Point`（**传 -1**，复用同一个 GE）→ 施加 `GE_Heal / GE_RefillAmmo / GE_RefillEnergy` |
+
+**为什么好**：资源满时击杀不再浪费；把「什么时候换」变成玩家的**主动决策**。
+
+**风险**：玩家会忘记按 → 必须配 HUD 提示（有可用点数时图标呼吸闪烁；低资源 + 有对应点数时屏幕边缘脉冲）。
+
+**验收**：打死敌人 → +1 点（不超过上限）；按键 → 点数 -1、资源 +N；0 点时按键无效；资源满时兑换不溢出。
+
+---
+
+### [~] 6.5 敌人：攻击走 GA（基础框架）
 
 **目标**：敌人攻击从「行为树 Task 里直接施加 GE」改成「**Task 触发 GA，GA 里执行攻击**」。
 
@@ -738,16 +757,33 @@ ApplyEffectToSelfByCaller(         → 通用 GE 施加
 
 **`BeginPlay` 自动做**：`GrantAbilities(StartingAbilities)`。
 
-### `UMyAttributeSet : UAttributeSet`
+### 属性集：**已拆成两个**（2026-10-26）
 
 ```cpp
-Health / MaxHealth
-Speed  / MaxSpeed          ← 目前空转（没接到 MaxWalkSpeed）
+// ① 基础集 —— 玩家和敌人都挂（C++ CreateDefaultSubobject，自动注册）
+UMyAttributeSet : UAttributeSet
+    Health / MaxHealth
+    Speed  / MaxSpeed          ← 目前空转（没接到 MaxWalkSpeed）
 
-PreAttributeChange()        ← clamp（Health 限制在 [0, MaxHealth]）
-PostGameplayEffectExecute()
-GetLifetimeReplicatedProps()  ← 单机项目用不上，可精简
+    PreAttributeChange()        ← clamp，只管「手动 Set」这条路
+    PostGameplayEffectExecute() ← clamp，管 GameplayEffect 这条路（两个都要写）
+
+// ② 资源集 —— 只挂玩家（BP_Player 里 Init Stats 创建，敌人不调）
+UResourceSet : UAttributeSet
+    Ammo / MaxAmmo / Energy / MaxEnergy / Money
+    HealthPoint / MaxHealthPoint
+    AmmoPoint   / MaxAmmoPoint
+    EnergyPoint / MaxEnergyPoint
+
+    **不做复制**（没有 GetLifetimeReplicatedProps）
+    默认值写在构造函数里 —— 蓝图零节点
 ```
+
+**为什么拆**：11/15 个属性只有玩家用，敌人身上带一堆死字段语义错误、调试时噪音大。
+
+**为什么不新建 Character 子类**：蓝图不能给 Actor 加非组件子对象，但 **`Init Stats` 可以从蓝图调用**，内部 `NewObject + AddSpawnedAttribute` —— 一行解决。
+
+**读取方式不变**：`Get Gameplay Attribute Value(Actor, UResourceSet.Ammo)` 会遍历所有 `SpawnedAttributes`，不需要任何指针。
 
 ## E.2 蓝图继承树
 
