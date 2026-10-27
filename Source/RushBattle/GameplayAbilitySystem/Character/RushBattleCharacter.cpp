@@ -105,7 +105,8 @@ FActiveGameplayEffectHandle ARushBattleCharacter::ApplyEffectToSelfByCaller(TSub
 	return AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 }
 
-FActiveGameplayEffectHandle ARushBattleCharacter::DealDamageTo(
+FActiveGameplayEffectHandle ARushBattleCharacter::DealDamageTo
+(
 	ARushBattleCharacter* Target,
 	TSubclassOf<UGameplayEffect> EffectClass,
 	FGameplayTag DataTag,
@@ -116,7 +117,6 @@ FActiveGameplayEffectHandle ARushBattleCharacter::DealDamageTo(
 	{
 		return FActiveGameplayEffectHandle();
 	}
-
 
 	// Context
 	FGameplayEffectContextHandle Context =

@@ -317,7 +317,7 @@ CurrentAmmo += 实际补
 
 ---
 
-### [~] 6.5 敌人：攻击走 GA（基础框架）
+### [x] 6.5 敌人：攻击走 GA（基础框架）
 
 **目标**：敌人攻击从「行为树 Task 里直接施加 GE」改成「**Task 触发 GA，GA 里执行攻击**」。
 
@@ -347,7 +347,10 @@ GA_Enemy_RangedAttack
 
 ---
 
-### [ ] 6.6 敌人：四种攻击方式（后续）
+### [~] 6.6 敌人：四种攻击方式（后续）
+
+> 进度：远程 ✅ / 近战 ✅ / 投掷 ⬜ / 锁定 ⬜（设计未定）
+> 打通用 `GA_EnemyAttackFromEvent`（`Event Activate Ability From Event` + Break GameplayEventData 取 Target）
 
 | 攻击 | 实现要点 |
 |---|---|
