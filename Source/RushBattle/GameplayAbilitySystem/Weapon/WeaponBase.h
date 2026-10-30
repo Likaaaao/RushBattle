@@ -6,6 +6,7 @@
 
 #include "GameFramework/Actor.h"
 #include "GameplayAbilitySpec.h"
+#include "Engine/DataAsset.h"
 #include "WeaponBase.generated.h"
 
 class UGameplayAbility;
@@ -22,6 +23,8 @@ public:
     UPROPERTY(VisibleInstanceOnly,BlueprintReadOnly,Category="Ability")
 	TArray<FGameplayAbilitySpecHandle> GrantedAbilityHandles;
 
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Weapon")
+	UPrimaryDataAsset * WeaponData;
 public:	
 	// Sets default values for this actor's properties
 	AWeaponBase();
@@ -42,6 +45,20 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Ability")
 	void RemoveAbilities(TArray<FGameplayAbilitySpecHandle>RemoveGrantedAbilityHandles);
+
+    UFUNCTION(BlueprintNativeEvent,BlueprintCallable, Category = "Weapon")
+	void EquipWeapon();
+	virtual void EquipWeapon_Implementation();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Weapon")
+	void UnequipWeapon();
+	virtual void UnequipWeapon_Implementation();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Weapon")
+	void InitWeapon();
+	virtual void InitWeapon_Implementation();
+
+
 private:
 	UAbilitySystemComponent* GetOnerASC()const;
 

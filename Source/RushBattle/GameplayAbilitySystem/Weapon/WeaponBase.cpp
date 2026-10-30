@@ -27,6 +27,21 @@ void AWeaponBase::Tick(float DeltaTime)
 
 }
 
+void AWeaponBase::EquipWeapon_Implementation()
+{
+
+}
+
+void AWeaponBase::UnequipWeapon_Implementation()
+{
+
+}
+
+void AWeaponBase::InitWeapon_Implementation()
+{
+
+}
+
 UAbilitySystemComponent* AWeaponBase::GetOnerASC() const
 {
 	AActor* OwnerActor = GetOwner();
@@ -64,7 +79,6 @@ void AWeaponBase::GrantAbility(TSubclassOf<UGameplayAbility> AbilityClass)
 	if (Handle.IsValid()) {
 		GrantedAbilityHandles.Add(Handle);
 	}
-
 }
 
 void AWeaponBase::GrantAbilitiesToOwner(TArray<TSubclassOf<UGameplayAbility>> GrantedAbilities)
