@@ -63,6 +63,26 @@ public:
 	FGameplayAttributeData MaxEnergyPoint;
 	ATTRIBUTE_ACCESSORS_BASIC(UResourceSet, MaxEnergyPoint)
 
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes|WeaponData")
+	FGameplayAttributeData DamageMultiplier;
+    ATTRIBUTE_ACCESSORS_BASIC(UResourceSet, DamageMultiplier)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes|WeaponData")
+	FGameplayAttributeData FireRateMultiplier;
+	ATTRIBUTE_ACCESSORS_BASIC(UResourceSet, FireRateMultiplier)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes|WeaponData")
+	FGameplayAttributeData CritChanceBonus;
+	ATTRIBUTE_ACCESSORS_BASIC(UResourceSet, CritChanceBonus)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes|WeaponData")
+	FGameplayAttributeData CritMultiplierBonus;
+	ATTRIBUTE_ACCESSORS_BASIC(UResourceSet, CritMultiplierBonus)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes|WeaponData")
+	FGameplayAttributeData ReloadSpeedMultiplier;
+	ATTRIBUTE_ACCESSORS_BASIC(UResourceSet, ReloadSpeedMultiplier)
+
 public:
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 

@@ -80,7 +80,7 @@ void ARushBattleCharacter::ApplyInitialAttributes()
     AttributeSet->SetHealth(InitialAttributes.Health);
     AttributeSet->SetMaxSpeed(InitialAttributes.MaxSpeed);
     AttributeSet->SetSpeed(InitialAttributes.Speed);
-
+	
 }
 
 
@@ -100,7 +100,7 @@ FActiveGameplayEffectHandle ARushBattleCharacter::ApplyEffectToSelfByCaller(TSub
 		return FActiveGameplayEffectHandle();
 	}
 	//setByCaller
-	SpecHandle.Data->SetSetByCallerMagnitude(DataTag, Magnitude);
+	SpecHandle.Data->SetSetByCallerMagnitude(DataTag, Magnitude); 
 	//apply
 	return AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 }

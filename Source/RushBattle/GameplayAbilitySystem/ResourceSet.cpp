@@ -19,7 +19,11 @@ UResourceSet::UResourceSet()
     EnergyPoint = 1.f;
     MaxEnergyPoint = 3.f;
 
-
+    DamageMultiplier = 1.f;
+    CritChanceBonus = 0.f;
+    CritMultiplierBonus=0.f;
+    FireRateMultiplier = 1.f;
+    ReloadSpeedMultiplier = 1.0f;
 }
 
 void UResourceSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -73,6 +77,21 @@ void UResourceSet::PreAttributeChange(const FGameplayAttribute& Attribute, float
     {
         NewValue = FMath::Max(NewValue, 0.f);
     }
+    else if (Attribute == GetDamageMultiplierAttribute()) {
+        NewValue = FMath::Max(NewValue, 0.f);
+    }
+    else if (Attribute == GetFireRateMultiplierAttribute()) {
+        NewValue = FMath::Max(NewValue, 0.f);
+    }
+    else if (Attribute == GetCritChanceBonusAttribute()) {
+        NewValue = FMath::Clamp(NewValue, 0.f, 1.f);
+    }
+    else if (Attribute == GetCritMultiplierBonusAttribute()) {
+        NewValue = FMath::Max(NewValue, 0.f);
+    }
+    else if (Attribute == GetReloadSpeedMultiplierAttribute()) {
+        NewValue = FMath::Max(NewValue, 0.f);
+    }
 }
 
 void UResourceSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
@@ -99,4 +118,6 @@ void UResourceSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackDat
     {
         SetEnergyPoint(FMath::Clamp(GetEnergyPoint(), 0.f, GetMaxEnergyPoint()));
     }
+
+
 }
