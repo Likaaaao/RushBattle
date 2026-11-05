@@ -41,7 +41,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trinket")
 	TObjectPtr<UTrinketPoolDataAsset> TrinketPool;
 
-    UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Trinket")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Trinket")
     TArray<FEquippedTrinket> EquippedTrink;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trinket")

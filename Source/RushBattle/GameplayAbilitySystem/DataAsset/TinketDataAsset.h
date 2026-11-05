@@ -41,7 +41,7 @@ public:
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Tinket")
     ETinketType TinketType= ETinketType::White;
 
-	UPROPERTY(BlueprintReadOnly, BlueprintReadOnly, Category = "Trinket")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Trinket")
 	TSubclassOf<UGameplayEffect> EffectToApply;
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Tinket")

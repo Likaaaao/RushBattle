@@ -17,5 +17,5 @@ class RUSHBATTLE_API UTrinketPoolDataAsset : public UPrimaryDataAsset
 	GENERATED_BODY()
 public:
 	UPROPERTY(BlueprintReadOnly,EditAnywhere,Category="Trinket")
-	TArray<TSubclassOf<UTinketDataAsset>> TrinketPool;
+	TArray<TObjectPtr<UTinketDataAsset>> TrinketPool;
 };

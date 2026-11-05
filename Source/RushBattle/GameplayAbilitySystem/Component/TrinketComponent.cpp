@@ -90,15 +90,27 @@ UTinketDataAsset* UTrinketComponent::RemoveTrinket(int32 Index)
 }
 
 void UTrinketComponent::ClearAllTrinkets()
+
 {
-	for (int32 i = 0; i < EquippedTrink.Num(); i++) {
-		if (EquippedTrink[i].Data) {
-			OnTrinketRemoved.Broadcast(EquippedTrink[i].Data, i);
-		}
-		RemoveEffect(EquippedTrink[i]);
+	if (EquippedTrink.Num() == 0)
+	{
+		return;
 	}
-	EquippedTrink.Empty();
+
+	TArray<FEquippedTrinket> OldEntries = MoveTemp(EquippedTrink);
+	EquippedTrink.Reset();
+
+	for (int32 i = 0; i < OldEntries.Num(); ++i)
+	{
+		if (OldEntries[i].Data)
+		{
+			OnTrinketRemoved.Broadcast(OldEntries[i].Data, i);
+		}
+		RemoveEffect(OldEntries[i]);
+	}
 }
+
+
 
 int32 UTrinketComponent::GetEquippedTrinketCount() const
 {
@@ -126,11 +138,13 @@ UAbilitySystemComponent* UTrinketComponent::GetOwnerASC() const
 void UTrinketComponent::ApplyEffect(FEquippedTrinket& Trinket)
 {
 	if (!Trinket.Data || !Trinket.Data->EffectToApply) {
+		UE_LOG(LogTemp, Warning, TEXT("[Trinket] ApplyEffect skipped: Data or EffectToApply is null"));
         return;
 	}
 
 	UAbilitySystemComponent* ASC = GetOwnerASC();
 	if (!ASC) {
+		UE_LOG(LogTemp, Warning, TEXT("[Trinket] ApplyEffect skipped: no ASC"));
 		return;
 	}
 
@@ -139,10 +153,14 @@ void UTrinketComponent::ApplyEffect(FEquippedTrinket& Trinket)
 
 	FGameplayEffectSpecHandle Spec=ASC->MakeOutgoingSpec(Trinket.Data->EffectToApply, 1, Ctx);
 	if (!Spec.IsValid()) {
+		UE_LOG(LogTemp, Warning, TEXT("[Trinket] ApplyEffect skipped£ºMakeOutgoingSpec failed"));
 		return;
 	}
 
 	Trinket.EffectHandle=ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+	UE_LOG(LogTemp, Log, TEXT("[Trinket] effect %s£¬handle valid=%s"),
+		*GetNameSafe(Trinket.Data),
+		Trinket.EffectHandle.IsValid() ? TEXT("YES") : TEXT("NO"));
 }
 
 void UTrinketComponent::RemoveEffect(FEquippedTrinket& Trinket)
