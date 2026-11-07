@@ -8,12 +8,12 @@
 #include "TrinketComponent.generated.h"
 
 
-class UTinketDataAsset;
+class UTrinketDataAsset;
 class UTrinketPoolDataAsset;
 class UAbilitySystemComponent;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTrinketEquipped, UTinketDataAsset*,Trinket,int32,Index);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTrinketRemoved, UTinketDataAsset*,Trinket,int32,Index);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTrinketEquipped, UTrinketDataAsset*,Trinket,int32,Index);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTrinketRemoved, UTrinketDataAsset*,Trinket,int32,Index);
 
 
 
@@ -22,7 +22,7 @@ struct FEquippedTrinket
 {
 	GENERATED_BODY()
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trinket")
-	TObjectPtr<UTinketDataAsset> Data;
+	TObjectPtr<UTrinketDataAsset> Data;
 
 	UPROPERTY()
 	FActiveGameplayEffectHandle EffectHandle;
@@ -38,6 +38,7 @@ public:
 	// Sets default values for this component's properties
 	UTrinketComponent();
 public:
+	//TrinketPool 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trinket")
 	TObjectPtr<UTrinketPoolDataAsset> TrinketPool;
 
@@ -65,13 +66,13 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Trinket")
-	bool EquipTrinket(UTinketDataAsset* Trinket);
+	bool EquipTrinket(UTrinketDataAsset* Trinket);
 
 	UFUNCTION(BlueprintCallable, Category = "Trinket")
-	UTinketDataAsset* ReplaceTrinket(UTinketDataAsset* Trinket, int32 Index);
+	UTrinketDataAsset* ReplaceTrinket(UTrinketDataAsset* Trinket, int32 Index);
 
 	UFUNCTION(BlueprintCallable, Category = "Trinket")
-	UTinketDataAsset* RemoveTrinket(int32 Index);
+	UTrinketDataAsset* RemoveTrinket(int32 Index);
 
 	UFUNCTION(BlueprintCallable, Category = "Trinket")
 	void ClearAllTrinkets();

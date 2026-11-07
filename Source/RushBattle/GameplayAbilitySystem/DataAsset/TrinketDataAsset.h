@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
-#include "TinketDataAsset.generated.h"
+#include "TrinketDataAsset.generated.h"
 
 /**
  * 
@@ -24,7 +24,7 @@ enum class ETinketType : uint8
 };
 
 UCLASS()
-class RUSHBATTLE_API UTinketDataAsset : public UPrimaryDataAsset
+class RUSHBATTLE_API UTrinketDataAsset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 public:

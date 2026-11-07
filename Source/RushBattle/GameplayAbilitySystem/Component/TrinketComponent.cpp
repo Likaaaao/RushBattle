@@ -3,7 +3,7 @@
 
 #include "RushBattle/GameplayAbilitySystem/Component/TrinketComponent.h"
 #include "RushBattle/GameplayAbilitySystem/DataAsset/TrinketPoolDataAsset.h"
-#include "RushBattle/GameplayAbilitySystem/DataAsset/TinketDataAsset.h"
+#include "RushBattle/GameplayAbilitySystem/DataAsset/TrinketDataAsset.h"
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
@@ -37,7 +37,7 @@ void UTrinketComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 	// ...
 }
 
-bool UTrinketComponent::EquipTrinket(UTinketDataAsset* Trinket)
+bool UTrinketComponent::EquipTrinket(UTrinketDataAsset* Trinket)
 {
 	if (!Trinket) {
 		return false;
@@ -55,14 +55,14 @@ bool UTrinketComponent::EquipTrinket(UTinketDataAsset* Trinket)
 	return true;
 }
 
-UTinketDataAsset* UTrinketComponent::ReplaceTrinket(UTinketDataAsset* Trinket, int32 Index)
+UTrinketDataAsset* UTrinketComponent::ReplaceTrinket(UTrinketDataAsset* Trinket, int32 Index)
 {
 	//check
 	if (!Trinket || !EquippedTrink.IsValidIndex(Index)) {
 		return nullptr;
 	}
 	//saved
-	UTinketDataAsset* OldTrinket = EquippedTrink[Index].Data;
+	UTrinketDataAsset* OldTrinket = EquippedTrink[Index].Data;
     RemoveEffect(EquippedTrink[Index]);
 	//equip
 	FEquippedTrinket NewTrinket;
@@ -74,12 +74,12 @@ UTinketDataAsset* UTrinketComponent::ReplaceTrinket(UTinketDataAsset* Trinket, i
 	return nullptr;
 }
 
-UTinketDataAsset* UTrinketComponent::RemoveTrinket(int32 Index)
+UTrinketDataAsset* UTrinketComponent::RemoveTrinket(int32 Index)
 {
 	if (!EquippedTrink.IsValidIndex(Index)) {
 		return nullptr;
 	}
-	UTinketDataAsset* OldTrinket = EquippedTrink[Index].Data;
+	UTrinketDataAsset* OldTrinket = EquippedTrink[Index].Data;
 	RemoveEffect(EquippedTrink[Index]);
 	EquippedTrink.RemoveAt(Index);
 
@@ -138,13 +138,11 @@ UAbilitySystemComponent* UTrinketComponent::GetOwnerASC() const
 void UTrinketComponent::ApplyEffect(FEquippedTrinket& Trinket)
 {
 	if (!Trinket.Data || !Trinket.Data->EffectToApply) {
-		UE_LOG(LogTemp, Warning, TEXT("[Trinket] ApplyEffect skipped: Data or EffectToApply is null"));
         return;
 	}
 
 	UAbilitySystemComponent* ASC = GetOwnerASC();
 	if (!ASC) {
-		UE_LOG(LogTemp, Warning, TEXT("[Trinket] ApplyEffect skipped: no ASC"));
 		return;
 	}
 
@@ -153,14 +151,10 @@ void UTrinketComponent::ApplyEffect(FEquippedTrinket& Trinket)
 
 	FGameplayEffectSpecHandle Spec=ASC->MakeOutgoingSpec(Trinket.Data->EffectToApply, 1, Ctx);
 	if (!Spec.IsValid()) {
-		UE_LOG(LogTemp, Warning, TEXT("[Trinket] ApplyEffect skipped£ºMakeOutgoingSpec failed"));
 		return;
 	}
 
 	Trinket.EffectHandle=ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
-	UE_LOG(LogTemp, Log, TEXT("[Trinket] effect %s£¬handle valid=%s"),
-		*GetNameSafe(Trinket.Data),
-		Trinket.EffectHandle.IsValid() ? TEXT("YES") : TEXT("NO"));
 }
 
 void UTrinketComponent::RemoveEffect(FEquippedTrinket& Trinket)

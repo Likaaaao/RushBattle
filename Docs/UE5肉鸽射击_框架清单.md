@@ -29,14 +29,23 @@
 
 | 阶段 | 内容 | 状态 | 当前优先级 |
 |---|---|---|---|
-| 阶段一 | 核心战斗地基 | **1~4 完成 · 5 暂停 · 6 进行中 · 7 部分完成** | **P0（推进中）** |
-| 阶段二 | 肉鸽循环 | 未开始 | 暂缓（玩法设计未定） |
+| 阶段一 | 核心战斗地基 | **1~4 完成 · 5 暂停 · 6 基本完成（6.6 余投掷/锁定）· 7 部分完成** | **P0（推进中）** |
+| 阶段二 | 肉鸽循环 | **饰品系统地基完成 · 掉落系统进行中** | **P0（当前主线）** |
 | 阶段三 | 流程与 UI | 未开始 | 暂缓 |
-| 跨阶段 | 手感 | 第一批完成 | 待 6.6 完成后继续 |
+| 跨阶段 | 手感 | 第一批完成 | — |
 | 阶段四 | 美术与音效替换 | 未开始 | 暂缓 |
-| 阶段五 | 性能优化实战 | 未开始 | P1（6.x 完成后开始） |
+| 阶段五 | 性能优化实战 | **观测能力已建立（11 完成）· 未做优化** | P1（拿到可玩版本后开始） |
 
-**当前唯一主线：6.2 → 6.5**（玩家资源属性 → Killer 追踪 → Ammo 属性化 → 敌人攻击走 GA）
+**当前主线：饰品掉落系统**（Roll → LootTable → Pickup → 拾取装槽）
+
+**已完成但不在原清单里的东西：**
+
+- 属性集拆分：`UMyAttributeSet`（基础 4 个）+ `UResourceSet`（玩家专属 11 个）
+- `AWeaponBase`：武器持有能力数组，装备/卸下时授予/移除到 Owner 的 ASC
+- 三层伤害数值模型：武器基础值（DA）+ 玩家倍率属性（ResourceSet）+ 全局倍率（占位 ×1.0）
+- `GetFinalStats` / `CalculateFinalDamage` 拆分
+- `BTS_FaceToTarget`：敌人持续转向（0.05s）
+- 性能观测方法：PIE 里测 Slate 会混入编辑器 UI，必须用 `-game` / Standalone
 
 ---
 
@@ -79,6 +88,21 @@
 - 字段清单：`FireInterval` `Damage` `Range` `Spread` `Recoil` `MagazineSize` `ReloadTime` `PelletsPerShot` `bAutomatic` `MaxReserveAmmo` `CritChance` `CritMultiplier` `WeaponMesh`
 - 切枪用**开局全部生成 + 可见性切换**，不 `SpawnActor`
 
+**2026-11 补充：`AWeaponBase`（C++ 基类）**
+
+```cpp
+// 武器持有"能力数组"，装备/卸下时授予/移除到 Owner 的 ASC
+TArray<TSubclassOf<UGameplayAbility>> WeaponAbilities;
+TArray<FGameplayAbilitySpecHandle> GrantedAbilityHandles;
+
+GrantAbilitiesToOwner()      // 去重：ASC 上已有同类 GA 就跳过
+RemoveAbilitiesFromOwner()
+```
+
+- 蓝图子类重写 `EquipWeapon` / `UnequipWeapon`（`BlueprintNativeEvent`），C++ 保证核心逻辑
+- `InitWeapon` 改为**显式调用**（生成方调），去掉了原来"等一帧 Delay"的做法
+- 换武器顺序必须是：**旧武器 Remove → 新武器 Grant**（否则共用能力会被一起撤掉）
+
 **验收标准**：
 > 不改任何蓝图节点，只在编辑器里新建一份武器数据资产，就能做出一把新武器。 ✅ 已通过
 
@@ -105,6 +129,24 @@
 
 - 伤害计算：`CalculateFinalDamage` 纯函数（攻击方算）→ 结果喂 `Set By Caller` → GE 施加
 - 受击闪烁延后到阶段四（需要带参数的材质）
+
+**2026-11 补充：三层伤害数值模型**
+
+| 层 | 内容 | 存哪 | 谁改 |
+|---|---|---|---|
+| 第一层 | 基础伤害 / 基础暴击率 / 基础暴击倍率 | `DA_Gun_*`（数据资产） | 武器出厂参数 |
+| 第二层 | `DamageMultiplier` / `CritChanceBonus` / `CritMultiplierBonus` / `FireRateMultiplier` / `ReloadSpeedMultiplier` | `UResourceSet`（玩家 ASC 属性） | 饰品、词条（Infinite GE） |
+| 第三层 | 全局倍率（角色/模式） | 公式里先写死 `× 1.0` | 以后接配置 |
+
+```
+暴击率 = Clamp(基础 + 层2加成 + 层3加成, 0, 1)     ← 加算
+暴击倍率 = 基础 + 层2加成 + 层3加成                 ← 加算
+伤害 = 基础 × 层2倍率 × 层3倍率 × (暴击 ? 暴击倍率 : 1)   ← 层间乘算
+```
+
+**已拆成两个函数：**
+- `GetFinalStats()` → 只算 `Damage / CritChance / CritMultiplier`（不判暴击，UI 可复用）
+- `CalculateFinalDamage()` → 调 `GetFinalStats` + 判暴击
 
 **验收标准**：
 > 敌人受伤、玩家受伤、可破坏物受伤，走的是同一套逻辑。 ✅ 已通过
@@ -204,10 +246,34 @@ SA_EnemySpawn3D（刷怪点）
 
 ---
 
-## [~] 6. GAS 体系完善　**← P0，当前主线**
+## [~] 6. GAS 体系完善　**← 主体完成，6.7 饰品系统中**
 
-> 迁移已完成。现在做的是**玩家资源**和**敌人攻击**这两块的 GAS 化。
-> 玩法设计（敌人类型 ↔ 资源）暂时不动，先把地基铺好。
+> 迁移已完成。玩家资源、敌人攻击都已 GAS 化。
+> 剩 6.6 的投掷/锁定（设计未定），以及 6.7 饰品系统的抽取与掉落。
+
+**已完成：6.2 / 6.3 / 6.4 / 6.4b / 6.5 / 6.6（远程+近战）**
+
+**进行中：6.7 饰品系统**
+
+**属性集现状（拆分后的最终形态）：**
+
+```cpp
+UMyAttributeSet（玩家 + 敌人共用，C++ CreateDefaultSubobject 自动注册）
+    Health / MaxHealth
+    Speed  / MaxSpeed          ← 仍然空转，没接到 MaxWalkSpeed
+
+UResourceSet（只有玩家，BP_Player 里 Init Stats 创建，敌人不调）
+    Ammo / MaxAmmo / Energy / MaxEnergy / Money
+    HealthPoint / MaxHealthPoint
+    AmmoPoint   / MaxAmmoPoint
+    EnergyPoint / MaxEnergyPoint
+    DamageMultiplier / FireRateMultiplier / ReloadSpeedMultiplier
+    CritChanceBonus  / CritMultiplierBonus
+```
+
+**为什么拆分**：11/15 个属性只有玩家用，敌人身上带一堆死字段。
+
+**为什么不用 Character 子类**：蓝图不能给 Actor 加非组件子对象，但 `Init Stats` 可以从蓝图调用（内部 `NewObject + AddSpawnedAttribute`）。
 
 ### 6.1 迁移收尾（已完成）
 
@@ -363,6 +429,87 @@ GA_Enemy_RangedAttack
 
 **加一种攻击 = 写一个 GA + 加一个 Tag + 数据里配一个 Tag，不改任何蓝图类。**
 
+**实际实现（2026-11）：**
+
+- 远程：`GA_Enemy_GunFire`，事件 `Event.Attack.Ranged`，前摇 0.3s，调 `BP_GunBase.PerformShot`
+- 近战：`GA_Enemy_MeleeAttack`，事件 `Event.Attack.Melee`，前摇 0.4s，`BP_EnemyBase.PerformMeleeAttack` 做距离/球形检测
+- 冷却：`GE_EnemyAttackCooldown`，两个攻击共用 `Cooldown.EnemyAttack` Tag
+- 入口：`BP_EnemyBase.Attack(Target) -> bool`（查冷却 → 存目标 → `SendGameplayEvent`）
+- 用 `Event Activate Ability From Event` + `Break GameplayEventData` 取 Target（无参版拿不到 payload）
+
+---
+
+### [~] 6.7 饰品系统（局内成长）
+
+> 这是清单原「阶段二 肉鸽循环」的地基，先放到这里推进。
+> 进度：数据结构 ✅ / 组件核心 ✅ / 抽取 ⬜ / 掉落 ⬜
+
+**设计决策（已定）：**
+
+| 项 | 决定 |
+|---|---|
+| 槽位 | 6 个（`MaxSlots`） |
+| 同种饰品 | 可以占多个槽，**不设上限**（唯一限制是槽位数） |
+| 获取方式 | **掉落在地上**，走过去拾取（不是三选一） |
+| 效果实现 | 一条饰品 = 一个 `Infinite` GE（可含多个 Modifier） |
+
+**数据结构：**
+
+```cpp
+UTrinketDataAsset : UPrimaryDataAsset
+    DisplayName / Description / Icon
+    Rarity (ETrinketRarity: White/Blue/Purple/Gold)
+    Weight (抽取权重)
+    Category (GameplayTag，暂时留空)
+    EffectToApply (TSubclassOf<UGameplayEffect>)
+
+UTrinketPoolDataAsset : UPrimaryDataAsset
+    TArray<TObjectPtr<UTrinketDataAsset>> TrinketPool   ← 注意是 TObjectPtr 不是 TSubclassOf
+```
+
+**`UTrinketComponent`（挂 BP_Player）：**
+
+```cpp
+MaxSlots / TrinketPool / EquippedTrinkets
+struct FEquippedTrinket { Data, EffectHandle }
+
+EquipTrinket(Data) -> bool
+ReplaceTrinket(Data, Index) -> 被替换的旧饰品
+RemoveTrinket(Index) -> 被移除的饰品
+ClearAllTrinkets()
+GetSlotsCount() / HasEmptySlot()
+
+事件：OnTrinketEquipped(Data, Index) / OnTrinketRemoved(Data, Index)
+```
+
+**已验证：** 装 6 个 → 属性正确叠加；清空 → 属性正确回落到基础值。
+
+**关键坑（已解决）：**
+
+```
+GE 的 Duration Policy 必须是 Infinite
+    → Instant 的 GE 施加后不产生 ActiveGameplayEffect
+    → ApplyGameplayEffectSpecToSelf 返回无效 handle
+    → 属性变了但撤不掉（"clear 没效果"）
+    → 判断信号：日志里 handle valid=NO 但属性确实变了
+```
+
+**还没做：**
+
+- [ ] `UTrinketPoolDataAsset::Roll` / `RollOne`（加权随机，不重复）
+- [ ] `ULootTableData`（引用池子 + Min/Max 掉落数 + 散布半径）
+- [ ] `ATrinketPickup`（地面掉落物，`Overlap` 拾取，槽满不捡）
+- [ ] `SpawnLoot` 静态函数（按表生成一批）
+- [ ] 触发点：关卡结束 / 奖励房 / 商店
+
+**掉落系统的三种用法（差异只在调用方）：**
+
+```
+关卡结束     → SpawnLoot(DA_LootTable_Level, 玩家位置)
+奖励房       → SpawnLoot(DA_LootTable_Reward, 房间中心)
+商店         → 不用 SpawnLoot，货架 Actor 各自 RollOne + 定价
+```
+
 ---
 
 ## [~] 7. 项目整理与清理　**← 部分完成，剩余跳过**
@@ -402,7 +549,7 @@ GA_Enemy_RangedAttack
 
 - [x] 框架清单放回仓库，修好 5 个死链
 - [x] 附录 E：项目结构快照（2026-10-22）
-- [ ] 补开发日志：09-22、09-26、10-10 ~ 10-21
+- [x] 补开发日志：09-22、09-26、10-10 ~ 10-21
 
 ---
 
@@ -412,27 +559,34 @@ GA_Enemy_RangedAttack
 
 **暂缓原因**：玩法设计还没定。当前方向是「敌人类型 ↔ 玩家资源」，但细节（资源上限、溢出、消耗端）要先想清楚。
 
-## [ ] 8. 肉鸽核心循环
+## [~] 8. 肉鸽核心循环
 
-**要做的事（旧方案，可能整体换掉）**：
-- [ ] 击杀敌人 → 掉落收益（经验 / 金币 / 直接升级）
-- [ ] 升级触发 → **三选一** 词条选择界面
-- [ ] 词条库：至少 10 条，效果有差异
-- [ ] 词条可叠加，效果能正确累加
-- [ ] 词条来源走数据配置（DataAsset）
-- [ ] 稀有度分级（普通/稀有/史诗），影响出现概率
+> **2026-11 进展**：方案已从「三选一」改为「**掉落在地上，走过去拾取**」。
+> 地基（饰品数据结构 + 组件 + GE 施加/移除）已完成，见 **6.7**。
+> 剩余：抽取 → 掉落表 → 掉落物 → 触发点。
+
+**要做的事**：
+- [x] 饰品数据结构（`UTrinketDataAsset` / `UTrinketPoolDataAsset`）
+- [x] 饰品槽位组件（`UTrinketComponent`，装/换/撤/清空）
+- [x] 饰品效果走 Infinite GE，能施加也能干净移除
+- [ ] 从池子随机抽取（`Roll` / `RollOne`）
+- [ ] 掉落表（池子 + 数量范围 + 散布）
+- [ ] 地面掉落物 + 拾取
+- [ ] 触发点：关卡结束 / 奖励房 / 商店
+- [ ] 饰品库至少 10 条，效果有差异
+- [ ] 稀有度分级影响出现概率（`Weight` 字段已留）
 
 **GAS 迁移后，词条的实现方式变了**：
 > 词条不再"改数据资产的读取结果"，而是**施加一个 Duration / Infinite 的 GameplayEffect**。
-> 例如「+20% 伤害」= 一个修改相关属性的 Infinite GE，叠层用 `Stacking`。
+> 例如「+20% 伤害」= 一个修改相关属性的 Infinite GE。
 
 **验收标准**：
-> 玩一局能明显感觉到「这局变强了」；同样的武器配不同词条，手感有可见差异。
+> 玩一局能明显感觉到「这局变强了」；同样的武器配不同饰品，手感有可见差异。
 
 **常见坑**：
-- 词条效果写死在 UI 里 → 加一条词条要改五处
-- 词条只做数值加成，没有质变型（如「子弹弹射」）
-- 三选一出现重复/无意义的选项
+- 饰品效果写死在 UI 里 → 加一条饰品要改五处
+- 只做数值加成，没有质变型（如「子弹弹射」）
+- 掉落池里全是数值型，没有组合乐趣
 
 ---
 
@@ -540,13 +694,45 @@ GA_Enemy_RangedAttack
 
 > **这是简历上最值钱的部分。** 面试官要的是「发现 → 定位 → 解决 → 数据对比」的完整故事。
 
-## [ ] 11. 建立性能观测能力
+## [x] 11. 建立性能观测能力
 
-- [ ] 学会 `stat unit` / `stat game` / `stat gpu` / `stat fps`
-- [ ] 学会用 **Unreal Insights** 抓取分析
-- [ ] 能看懂：Game 线程 / Draw 线程 / GPU 谁先到瓶颈
+- [x] 学会 `stat unit` / `stat game` / `stat slate` / `stat scenerendering` / `stat ai` / `stat physics`
+- [x] 能看懂：Game 线程 / Draw 线程 / GPU 谁先到瓶颈
+- [ ] 学会用 **Unreal Insights** 抓取分析（还没实际操作过）
+
+**已建立的方法论（重要）：**
+
+```
+❌ 在 PIE 里测 Slate → 测到的是编辑器 UI（Elements 568、Slate 6.2ms）
+✅ 用 -game / Standalone → 才是真实值（Elements 12、Slate 0.35ms）
+```
+
+**判断瓶颈的流程：**
+
+```
+① stat unit → Frame ≈ 三者中最大的那个
+② 进去对应 stat group，找 InclusiveAvg 最大的行
+③ 看 Max 列：远大于 Avg → 尖峰；≈ Avg → 持续开销
+④ 一直挖到 Exclusive ≈ Inclusive（叶子节点）
+```
+
+**已测出的基线（Standalone，1280×720，100% 屏幕百分比）：**
+
+| 场景 | Frame | Game | Draw | GPU | Draws |
+|---|---|---|---|---|---|
+| 空场景 | 8.41 | 4.97 | 8.40 | — | 276 |
+| 48 敌人 | 9.07 | 6.72 | 9.08 | 6.51 | 499 |
+
+**结论：Gameplay 每敌人 0.036 ms，非常健康；瓶颈在 Draw 线程。**
+
+**已发现的渲染开销：**
+
+- 光追：`Ray tracing dynamic update primitives = 75,081`，关掉后 Draw 8.97 → 7.02
+- GPU 7.26 ms 偏高，怀疑体积云（`r.VolumetricCloud 0` 未验证）
+- 测试关卡本身 160K 三角形，空场景 Draw 就有 8.4 ms → 需要一个干净的压测场景
 
 **验收**：能对当前项目说出一句话诊断：「当前瓶颈在 Game 线程，主要来自 XX」。
+→ 已达成：「瓶颈在 Draw 线程，空场景就有 8.4ms，与 Gameplay 无关」。
 
 ## [ ] 12. 压力测试场景
 
@@ -735,6 +921,27 @@ git status          # 确认没有 Content/Assets/ 的东西混进来
 
 ## E.1 C++ 层（`Source/RushBattle/`）
 
+### 目录结构（2026-11 现状，待重组）
+
+```
+Source/RushBattle/
+├── RushBattle.h / .cpp / RushBattle.Build.cs
+└── GameplayAbilitySystem/          ← 名字偏窄，以后按功能域重组
+    ├── MyAttributeSet.h / .cpp
+    ├── ResourceSet.h / .cpp
+    ├── Character/
+    │   └── RushBattleCharacter.h / .cpp
+    ├── Weapon/
+    │   └── WeaponBase.h / .cpp
+    ├── Component/
+    │   └── TrinketComponent.h / .cpp
+    └── DataAsset/
+        ├── TrinketDataAsset.h / .cpp
+        └── TrinketPoolDataAsset.h / .cpp
+```
+
+**计划重组成**：`Character/` · `AbilitySystem/AttributeSet/` · `Weapon/` · `Trinket/` · `Core/`
+
 ### `ARushBattleCharacter : ACharacter, IAbilitySystemInterface`
 
 **玩家和敌人的共同基类。**
@@ -754,8 +961,11 @@ GrantAbilities(Abilities)          → BeginPlay 自动调用，批量 GiveAbili
 RemoveAbility(Handles)
 GetAbilitySystemComponent()        → 接口实现
 ApplyInitialAttributes()           → 直设属性，不走 GE
-ApplyEffectToSelfByCaller(         → 通用 GE 施加
+EffectToSelfByCaller(              → 通用 GE 施加
     EffectClass, DataTag, Magnitude, Level)
+DealDamageTo(                      → 对别人造成伤害，记录 LastDamageInstigator
+    Target, EffectClass, DataTag, Magnitude, Causer)
+NotifyKilledEnemy(Victim)          → 广播 OnKilledEnemy
 ```
 
 **`BeginPlay` 自动做**：`GrantAbilities(StartingAbilities)`。
@@ -778,6 +988,10 @@ UResourceSet : UAttributeSet
     AmmoPoint   / MaxAmmoPoint
     EnergyPoint / MaxEnergyPoint
 
+    // 2026-11 新增：饰品/词条可改的倍率
+    DamageMultiplier / FireRateMultiplier / ReloadSpeedMultiplier
+    CritChanceBonus  / CritMultiplierBonus
+
     **不做复制**（没有 GetLifetimeReplicatedProps）
     默认值写在构造函数里 —— 蓝图零节点
 ```
@@ -787,6 +1001,51 @@ UResourceSet : UAttributeSet
 **为什么不新建 Character 子类**：蓝图不能给 Actor 加非组件子对象，但 **`Init Stats` 可以从蓝图调用**，内部 `NewObject + AddSpawnedAttribute` —— 一行解决。
 
 **读取方式不变**：`Get Gameplay Attribute Value(Actor, UResourceSet.Ammo)` 会遍历所有 `SpawnedAttributes`，不需要任何指针。
+
+### `AWeaponBase : AActor`（2026-11）
+
+**武器的 C++ 基类。`BP_GunBase` 已重新父类到它。**
+
+```cpp
+// 配置（Class Defaults）
+TArray<TSubclassOf<UGameplayAbility>> WeaponAbilities;   // 这把武器提供的能力
+TObjectPtr<UPrimaryDataAsset>         WeaponData;        // 数据资产（之后可换 UWeaponData）
+
+// 运行时
+TArray<FGameplayAbilitySpecHandle> GrantedAbilityHandles;
+
+GrantAbilitiesToOwner()     // 去重：ASC 上已有同类 GA 就跳过
+RemoveAbilitiesFromOwner()  // 按记录下来的 handle 逐个 ClearAbility
+
+// 蓝图可重写的钩子（BlueprintNativeEvent）
+EquipWeapon() / UnequipWeapon()
+```
+
+**换武器顺序必须**：旧武器 `RemoveAbilitiesFromOwner()` → 新武器 `GrantAbilitiesToOwner()`。
+
+**`InitWeapon` 改成显式调用**（由生成方在 `SpawnActor` 后调），去掉了原来"等一帧 Delay"的补丁。
+
+### 饰品系统（2026-11，进行中）
+
+```cpp
+UTrinketDataAsset : UPrimaryDataAsset
+    DisplayName / Description / Icon
+    Rarity (ETrinketRarity: White / Blue / Purple / Gold)
+    Weight / Category
+    EffectToApply (TSubclassOf<UGameplayEffect>)     // 必须是 Infinite
+
+UTrinketPoolDataAsset : UPrimaryDataAsset
+    TArray<TObjectPtr<UTrinketDataAsset>> TrinketPool   // 注意：TObjectPtr 不是 TSubclassOf
+    Roll(Count) / RollOne()                             // ⬜ 待实现
+
+UTrinketComponent : UActorComponent（挂 BP_Player）
+    MaxSlots = 6 / TrinketPool / EquippedTrinkets
+    EquipTrinket / ReplaceTrinket / RemoveTrinket / ClearAllTrinkets
+    GetSlotsCount / HasEmptySlot
+    事件 OnTrinketEquipped / OnTrinketRemoved
+```
+
+**关键坑**：GE 的 `Duration Policy` 必须是 `Infinite`。`Instant` 的 GE 施加后不产生 `ActiveGameplayEffect`，`ApplyGameplayEffectSpecToSelf` 返回**无效 handle** → 属性变了但撤不掉，表现为"清空没效果"。
 
 ## E.2 蓝图继承树
 
@@ -939,40 +1198,46 @@ AIC_Enemy → 行为树
 
 ## E.9 当前缺口
 
-### 🔴 P0：资源玩法的地基是空的
+> **2026-11 更新**：原来的 🔴 P0 三条（Ammo/Energy/Money 不存在、EnemyTag 没人读、Ammo 在武器上）**已全部解决**。
+> 现在的缺口换成了"饰品掉落"和"肉鸽循环"。
 
-| # | 问题 |
+### 🟢 已解决（保留记录）
+
+| 原问题 | 现状 |
 |---|---|
-| 1 | **`Ammo` / `Energy` / `Money` 三个属性不存在** → 「打死黄敌人给弹」没有地方加 |
-| 2 | **`EnemyTag` 没有任何逻辑读它** → 敌人死了只掉血，不掉资源 |
-| 3 | **Ammo 现在在 `BP_GunBase` 上**（武器的），不是角色属性 |
+| `Ammo` / `Energy` / `Money` 属性不存在 | ✅ 已加到 `UResourceSet` |
+| `EnemyTag` 没有任何逻辑读它 | ✅ `OnKilledEnemy` → `EnemyTag` → 加资源点 |
+| Ammo 在 `BP_GunBase` 上 | ✅ 已迁到 `UResourceSet` |
 
-**三条是同一件事**，顺序：
+### 🔴 当前 P0：饰品掉落链路
 
-```
-先定：Ammo 是「角色总弹药池」还是「每把枪独立」
-    ↓
-补属性：UMyAttributeSet 加 Ammo / Energy / Money
-    ↓
-建 GE：GE_Reward_Ammo / _Energy / _Money
-    ↓
-接死亡：Switch on EnemyTag → 施加对应 GE
-```
+| # | 缺口 |
+|---|---|
+| 1 | `UTrinketPoolDataAsset` 没有 `Roll` / `RollOne` → 抽不了 |
+| 2 | 没有掉落表 → 无法配置"掉几个、从哪个池子" |
+| 3 | 没有地面掉落物 → 抽出来的东西无处可放 |
+| 4 | 没有触发点 → 关卡结束/奖励房都不会掉 |
 
 ### 🟡 P1：待清理
 
 | # | 项目 | 备注 |
 |---|---|---|
-| 4 | `BP_GameMode` 的刷怪套件 | **删之前先搜 `HandleEnemyDeath` 有没有人调** |
-| 5 | `BP_Enemy_Health/Ammo/Energy` | 测试用，功能接完就能删 |
-| 6 | `DA_Enemy_Test` | 同上 |
+| 5 | `BP_GameMode` 的刷怪套件 | **删之前先搜 `HandleEnemyDeath` 有没有人调** |
+| 6 | `BP_Enemy_Health/Ammo/Energy` | 测试用，功能接完就能删 |
+| 7 | `DA_Enemy_Test` | 同上 |
+| 8 | `Content/Code` 文件夹结构 | 按功能域重组，分批移动 + Fix Up Redirectors |
+| 9 | `Config/DefaultEngine.ini` 的 `CoreRedirects` | 迁移稳定后可删（Tinket → Trinket 残留） |
+| 10 | 测试关卡太重（160K 三角形） | 需要一个干净的空场景做压测基线 |
 
 ### 🟢 P2：设计上以后要处理
 
 | # | 项目 | 什么时候 |
 |---|---|---|
-| 7 | `CurrentWeapon : BP_GunBase` 类型过窄 | 加近战 / 能量武器时 |
-| 8 | `Speed` / `MaxSpeed` 空转 | 做减速 / Buff 时接到 `MaxWalkSpeed` |
+| 11 | `CurrentWeapon : BP_GunBase` 类型过窄 | 加近战 / 能量武器时 |
+| 12 | `Speed` / `MaxSpeed` 空转 | 做减速 / Buff 时接到 `MaxWalkSpeed` |
+| 13 | 三层数值模型的第三层（全局倍率） | 做"模式难度 / 角色天赋"时 |
+| 14 | `UWeaponData`（C++ 数据类） | 要把 `CalculateFinalDamage` 搬 C++ 时 |
+| 15 | 6.6 投掷 / 锁定攻击 | 设计定了以后 |
 | 9 | `UMyAttributeSet` 的复制代码 | 随时可精简（单机不需要） |
 | 10 | `GE_InitStats` 只设了 Health，没设 Speed | 敌人要用 Speed 属性时补 |
 

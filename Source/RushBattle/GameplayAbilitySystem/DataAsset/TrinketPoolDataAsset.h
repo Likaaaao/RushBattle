@@ -9,13 +9,20 @@
 /**
  * 
  */
-class UTinketDataAsset;
+class UTrinketDataAsset;
 
 UCLASS()
 class RUSHBATTLE_API UTrinketPoolDataAsset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 public:
-	UPROPERTY(BlueprintReadOnly,EditAnywhere,Category="Trinket")
-	TArray<TObjectPtr<UTinketDataAsset>> TrinketPool;
+	UPROPERTY(BlueprintReadWrite,EditAnywhere,Category="Trinket")
+	TArray<TObjectPtr<UTrinketDataAsset>> TrinketPool;
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Trinket")
+	UTrinketDataAsset* RollTrinketOne()const;
+
+	UFUNCTION(BlueprintCallable, Category = "Trinket")
+	TArray<UTrinketDataAsset*> RollTrinketCount(int32 count)const;
 };
