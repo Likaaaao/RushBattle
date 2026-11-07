@@ -6,7 +6,9 @@
 
 | 日期 | 一句话摘要 | 对应清单项 |
 |---|---|---|
-| [2026-11-06](2026-11-06.md) | 属性集拆成 `MyAttributeSet` + `ResourceSet`；资源点机制；敌人攻击走 GA（远程+近战）；`AWeaponBase` 武器持能力；三层伤害数值模型；**性能观测的关键教训：PIE 里测 Slate 会混入编辑器 UI（6.2ms vs 0.35ms）**；饰品系统（`Instant` GE 没有 handle 撤不掉）；`Tinket` → `Trinket` 用 CoreRedirects 改名 | 第 2/3/6 项 · 6.7 · 第 8 项 · 第 11 项 |
+| [2026-11-07](2026-11-07.md) | 掉落系统落地：`ULootTableDataAsset` / `ULootSubSystem` / `ATrinketPickup`；四层分层（数据 / 状态 / 流动 / 表现）；5 个坑（IWYU 首行 include、空 `PickupClass` 崩溃、候选池越界、静默不掉落、散布半径） | 6.7 · 第 8 项 |
+| [2026-11-06](2026-11-06.md) | 属性集拆成 `MyAttributeSet` + `ResourceSet`；资源点机制；敌人攻击走 GA（远程+近战）；`AWeaponBase` 武器持能力；三层伤害数值模型；**性能观测的关键教训：PIE 里测 Slate 会混入编辑器 UI（6.2ms vs 0.35ms）**；`Tinket` → `Trinket` 用 CoreRedirects 改名 | 第 2/3/6 项 · 6.7 · 第 8 项 · 第 11 项 |
+| [2026-11-05](2026-11-05.md) | 饰品系统设计定案（6 槽 / 无限叠 / 掉落式）并跑通装备与清空；6 个坑（**`Instant` GE 没有 handle 撤不掉**、`if` 缺花括号的报错行号、`UE_LOG` 中文触发 C2001、`TSubclassOf` vs `TObjectPtr`、蓝图类 ≠ 数据资产实例、广播时机） | 6.7 · 第 8 项 |
 | [2026-10-20](2026-10-20.md) | 敌人血量数据驱动（`GE_InitStats` + `SetByCaller`）；资产命名整理；**C++ 类改名失败并回退** —— 记录「改类名 = 删除+新建，会摧毁蓝图父类引用，父类没了绝不能保存」 | 第 3 项 / 第 6 项 / 第 7 项 |
 | [2026-10-09](2026-10-09.md) | 接入 GAS：伤害与生命值迁到 GameplayEffect，开火/换弹做成 GameplayAbility（射速 = 冷却 Duration），互斥改用 GameplayTag；记录 5 个静默失败的坑 | 第 2 项 / 第 3 项 |
 | [2026-09-24](2026-09-24.md) | 移动与镜头手感第二批：修掉 `BobTime` 误放局部变量导致镜头不晃；`BP_Player` 变量按 `Category` 分组；查清摄像机 `Use Pawn Control Rotation` 会覆盖世界旋转，给出 Roll 倾斜方案 | —（手感专项） |
