@@ -4,6 +4,8 @@
 #include "RushBattleCharacter.h"
 #include "RushBattle/GameplayAbilitySystem/MyAttributeSet.h"
 
+
+
 // Sets default values
 ARushBattleCharacter::ARushBattleCharacter()
 {
@@ -12,8 +14,8 @@ ARushBattleCharacter::ARushBattleCharacter()
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
-
 	AttributeSet= CreateDefaultSubobject<UMyAttributeSet>(TEXT("AttributeSet"));
+
 
 }
 
@@ -21,8 +23,9 @@ ARushBattleCharacter::ARushBattleCharacter()
 void ARushBattleCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	SetupAttributeSets();
+	ApplyInitStats();
 	GrantAbilities(StartingAbilities);
-
 }
 
 // Called every frame
@@ -38,6 +41,7 @@ void ARushBattleCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 }
+
 
 TArray<FGameplayAbilitySpecHandle> ARushBattleCharacter::GrantAbilities(TArray<TSubclassOf<UGameplayAbility>>AbilitiesToGrant) {
 	if (!AbilitySystemComponent) {
@@ -72,17 +76,7 @@ UAbilitySystemComponent* ARushBattleCharacter::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
-void ARushBattleCharacter::ApplyInitialAttributes()
-{
-	if (!AbilitySystemComponent || !AttributeSet) {
-		return;
-	}
-	AttributeSet->SetMaxHealth(InitialAttributes.MaxHealth);
-    AttributeSet->SetHealth(InitialAttributes.Health);
-    AttributeSet->SetMaxSpeed(InitialAttributes.MaxSpeed);
-    AttributeSet->SetSpeed(InitialAttributes.Speed);
-	
-}
+
 
 
 
@@ -150,4 +144,34 @@ void ARushBattleCharacter::NotifyKilledEnemy(ARushBattleCharacter* Victim)
 	}
 
 	OnKilledEnemy.Broadcast(Victim);
+}
+
+void ARushBattleCharacter::SetupAttributeSets()
+{
+	// 子类重写这个函数来创建 UResourceSet
+}
+
+void ARushBattleCharacter::ApplyInitStats()
+{
+	if (!InitStats || !AttributeSet)
+	{
+		return;
+	}
+
+	AttributeSet->SetMaxHealth(FMath::Max(InitStats->MaxHealth, 1.f));
+	AttributeSet->SetHealth(FMath::Clamp(InitStats->Health, 0.f, InitStats->MaxHealth));
+
+	AttributeSet->SetMaxSpeed(FMath::Max(InitStats->MaxSpeed, 0.f));
+	AttributeSet->SetSpeed(FMath::Clamp(InitStats->Speed, 0.f, InitStats->MaxSpeed));
+}
+
+void ARushBattleCharacter::ApplyInitStatsWith(UCharacterInitStats* NewStats)
+{
+	if (!NewStats)
+	{
+		return;
+	}
+
+	InitStats = NewStats;
+	ApplyInitStats();
 }

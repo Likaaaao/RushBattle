@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
+#include "RushBattle/GameplayAbilitySystem/DataAsset/InitStatsDataAsset.h"
 #include "RushBattleCharacter.generated.h"
 class ARushBattleCharacter;
 
@@ -13,25 +14,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FOnKilledEnemy,
 	ARushBattleCharacter*, Victim);
 
-USTRUCT(BlueprintType)
-struct FCharacterAttributes
-{
-	GENERATED_BODY()
-
-	//	Basic Attributes
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
-	float MaxHealth = 100.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
-	float Health = 100.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
-	float Speed = 600.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
-	float MaxSpeed = 600.f;
-
-};
 
 UCLASS()
 class RUSHBATTLE_API ARushBattleCharacter : public ACharacter, public IAbilitySystemInterface
@@ -47,14 +29,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AbilitySystem")
 	TArray<TSubclassOf<UGameplayAbility>> StartingAbilities;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attributes")
-	FCharacterAttributes InitialAttributes;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Init")
+	TObjectPtr<UCharacterInitStats> InitStats;
+
 
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<AActor> LastDamageInstigator;
 
 	UPROPERTY(BlueprintAssignable, Category = "Combat")
 	FOnKilledEnemy OnKilledEnemy;
+
+
 public:
 	// Sets default values for this character's properties
 	ARushBattleCharacter();
@@ -70,6 +55,7 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+
 	UFUNCTION(BlueprintCallable, Category = "AbilitySystem")
 	TArray<FGameplayAbilitySpecHandle> GrantAbilities(TArray<TSubclassOf<UGameplayAbility>>AbilitiesToGrant);
 
@@ -79,8 +65,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AbilitySystem")
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent()const override;
 
-	UFUNCTION(BlueprintCallable, Category = "Attributes")
-	void ApplyInitialAttributes();
+	virtual void SetupAttributeSets();
+
+	UFUNCTION(BlueprintCallable, Category = "Init")
+	virtual void ApplyInitStats();
+
+	UFUNCTION(BlueprintCallable, Category = "Init")
+	void ApplyInitStatsWith(UCharacterInitStats* NewStats);
 
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	FActiveGameplayEffectHandle ApplyEffectToSelfByCaller(
