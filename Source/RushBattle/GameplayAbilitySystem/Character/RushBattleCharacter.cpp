@@ -14,6 +14,7 @@ ARushBattleCharacter::ARushBattleCharacter()
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
 	AttributeSet= CreateDefaultSubobject<UMyAttributeSet>(TEXT("AttributeSet"));
+
 }
 
 // Called when the game starts or when spawned

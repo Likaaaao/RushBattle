@@ -569,9 +569,9 @@ GE 的 Duration Policy 必须是 Infinite
 - [x] 饰品数据结构（`UTrinketDataAsset` / `UTrinketPoolDataAsset`）
 - [x] 饰品槽位组件（`UTrinketComponent`，装/换/撤/清空）
 - [x] 饰品效果走 Infinite GE，能施加也能干净移除
-- [ ] 从池子随机抽取（`Roll` / `RollOne`）
-- [ ] 掉落表（池子 + 数量范围 + 散布）
-- [ ] 地面掉落物 + 拾取
+- [x] 从池子随机抽取（`Roll` / `RollOne`）
+- [x] 掉落表（池子 + 数量范围 + 散布）
+- [x] 地面掉落物 + 拾取
 - [ ] 触发点：关卡结束 / 奖励房 / 商店
 - [ ] 饰品库至少 10 条，效果有差异
 - [ ] 稀有度分级影响出现概率（`Weight` 字段已留）
