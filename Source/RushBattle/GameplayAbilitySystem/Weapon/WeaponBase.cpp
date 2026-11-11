@@ -2,6 +2,7 @@
 
 
 #include "RushBattle/GameplayAbilitySystem/Weapon/WeaponBase.h"
+#include "RushBattle/GameplayAbilitySystem/ResourceSet.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 
@@ -42,6 +43,25 @@ void AWeaponBase::InitWeapon_Implementation()
 
 }
 
+void AWeaponBase::CalculateFinalDamage(float BaseDamage, float BaseCritChance, float BaseCritMultiplier, float& OutFinalDamage, bool& bOutWasCrit)const
+{
+	//0:Damage 1:CritChance 2:CritMultiplier  *only 3 params*
+	const TArray <float> FinalStats = GetFinalStats(BaseDamage, BaseCritChance, BaseCritMultiplier);
+	const float Damage= FinalStats[0];
+	const float CritChance = FinalStats[1];
+	const float CritMultiplier = FinalStats[2];
+
+	if (FMath::FRand() < CritChance) {
+		bOutWasCrit = true;
+		OutFinalDamage = Damage * CritMultiplier;
+	}
+	else {
+		bOutWasCrit = false;
+		OutFinalDamage = Damage;
+	}
+}
+
+
 UAbilitySystemComponent* AWeaponBase::GetOnerASC() const
 {
 	AActor* OwnerActor = GetOwner();
@@ -54,6 +74,29 @@ UAbilitySystemComponent* AWeaponBase::GetOnerASC() const
 	}
 	//back to find ASC
 	return OwnerActor->FindComponentByClass<UAbilitySystemComponent>();
+}
+
+TArray<float> AWeaponBase::GetFinalStats(float BaseDamage, float BaseCritChance, float BaseCritMultiplier)const
+{
+	UAbilitySystemComponent* ASC = GetOnerASC();
+	if (!ASC) {
+		return { BaseDamage, BaseCritChance, BaseCritMultiplier };
+	}
+	
+	const UResourceSet* RS = ASC->GetSet<UResourceSet>();
+	if (!RS) {
+		return { BaseDamage, BaseCritChance, BaseCritMultiplier };
+	}
+
+
+	float DamageMultiplier = RS->GetDamageMultiplier();
+	float CritChanceBonus =RS->GetCritChanceBonus();
+	float CritMultiplierBonus = RS->GetCritMultiplierBonus();
+	return {
+		BaseDamage * DamageMultiplier,
+		BaseCritChance + CritChanceBonus,
+		BaseCritMultiplier + CritMultiplierBonus
+	};
 }
 
 void AWeaponBase::GrantAbility(TSubclassOf<UGameplayAbility> AbilityClass)

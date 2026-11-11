@@ -16,14 +16,16 @@ class RUSHBATTLE_API ARushBattlePlayerCharacter : public ARushBattleCharacter
 {
 	GENERATED_BODY()
 public:
+    ARushBattlePlayerCharacter();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeSet")
+	TObjectPtr<UResourceSet> ResourceSet;
+public:
 	virtual void ApplyInitStats() override;
 
-	virtual void SetupAttributeSets() override;
 
 	UFUNCTION(BlueprintPure, Category = "Player")
 	UResourceSet* GetResourceSet() const { return ResourceSet; }
-private:
-	UPROPERTY(Transient)
-	TObjectPtr<UResourceSet> ResourceSet;
+
 
 };

@@ -6,22 +6,9 @@
 #include "Net/UnrealNetwork.h"
 UResourceSet::UResourceSet()
 { 
-    Ammo = 30.f;
-    MaxAmmo = 120.f;
-    Energy = 100.f;
-    MaxEnergy = 100.f;
-    Money = 0.f;
-
-    HealthPoint = 1.f;
-    MaxHealthPoint = 3.f;
-    AmmoPoint = 1.f;
-    MaxAmmoPoint = 3.f;
-    EnergyPoint = 1.f;
-    MaxEnergyPoint = 3.f;
-
     DamageMultiplier = 1.f;
     CritChanceBonus = 0.f;
-    CritMultiplierBonus=0.f;
+    CritMultiplierBonus=1.f;
     FireRateMultiplier = 1.f;
     ReloadSpeedMultiplier = 1.0f;
 }

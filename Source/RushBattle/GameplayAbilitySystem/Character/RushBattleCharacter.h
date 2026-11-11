@@ -9,6 +9,7 @@
 #include "RushBattle/GameplayAbilitySystem/DataAsset/InitStatsDataAsset.h"
 #include "RushBattleCharacter.generated.h"
 class ARushBattleCharacter;
+class UMyAttributeSet;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FOnKilledEnemy,
@@ -23,8 +24,8 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystem")
 	UAbilitySystemComponent* AbilitySystemComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystem")
-	class UMyAttributeSet* AttributeSet;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeSet")
+	TObjectPtr<UMyAttributeSet> AttributeSet;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AbilitySystem")
 	TArray<TSubclassOf<UGameplayAbility>> StartingAbilities;

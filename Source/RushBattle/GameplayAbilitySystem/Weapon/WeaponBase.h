@@ -59,8 +59,14 @@ public:
 	virtual void InitWeapon_Implementation();
 
 
+	UFUNCTION(BlueprintCallable, Category = "Weapon|Damage")
+	void CalculateFinalDamage(float BaseDamage, float BaseCritChance, float BaseCritMultiplier, float& OutFinalDamage, bool& WasCrit)const;
+
+
 private:
 	UAbilitySystemComponent* GetOnerASC()const;
+
+	TArray<float> GetFinalStats(float BaseDamage, float BaseCritChance, float BaseCritMultiplier)const;
 
 	 
 };

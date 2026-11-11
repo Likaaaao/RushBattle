@@ -14,6 +14,7 @@ ARushBattleCharacter::ARushBattleCharacter()
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+
 	AttributeSet= CreateDefaultSubobject<UMyAttributeSet>(TEXT("AttributeSet"));
 
 

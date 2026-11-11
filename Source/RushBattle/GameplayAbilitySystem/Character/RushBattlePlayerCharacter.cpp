@@ -5,17 +5,9 @@
 #include "RushBattle/GameplayAbilitySystem/DataAsset/InitStatsDataAsset.h"
 #include "RushBattle/GameplayAbilitySystem/ResourceSet.h"
 
-void ARushBattlePlayerCharacter::SetupAttributeSets()
+ARushBattlePlayerCharacter::ARushBattlePlayerCharacter()
 {
-	Super::SetupAttributeSets();
-
-	if (!AbilitySystemComponent || ResourceSet)
-	{
-		return;
-	}
-
-	ResourceSet = NewObject<UResourceSet>(this);
-	AbilitySystemComponent->AddSpawnedAttribute(ResourceSet);
+	ResourceSet = CreateDefaultSubobject<UResourceSet>(TEXT("ResourceSet"));
 }
 
 void ARushBattlePlayerCharacter::ApplyInitStats()
