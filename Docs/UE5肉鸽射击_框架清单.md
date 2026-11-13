@@ -29,23 +29,82 @@
 
 | 阶段 | 内容 | 状态 | 当前优先级 |
 |---|---|---|---|
-| 阶段一 | 核心战斗地基 | **1~4 完成 · 5 暂停 · 6 基本完成（6.6 余投掷/锁定）· 7 部分完成** | **P0（推进中）** |
-| 阶段二 | 肉鸽循环 | **饰品系统地基完成 · 掉落系统进行中** | **P0（当前主线）** |
-| 阶段三 | 流程与 UI | 未开始 | 暂缓 |
+| 阶段一 | 核心战斗地基 | **1~4 完成 · 5 暂停 · 6 基本完成（6.6 余投掷/锁定）· 7 部分完成** | 收尾 |
+| 阶段二 | 肉鸽循环 | **饰品 + 掉落 + 拾取全链路打通** | 待补内容 |
+| 阶段三 | 流程与 UI | **UI 系统重做中 · 关卡流程未开始** | **P0（当前主线）** |
 | 跨阶段 | 手感 | 第一批完成 | — |
 | 阶段四 | 美术与音效替换 | 未开始 | 暂缓 |
 | 阶段五 | 性能优化实战 | **观测能力已建立（11 完成）· 未做优化** | P1（拿到可玩版本后开始） |
 
-**当前主线：饰品掉落系统**（Roll → LootTable → Pickup → 拾取装槽）
+**当前主线：UI 系统重做**（见第 10 项 10.1 → 10.6）
+
+**当前能玩到的状态：**
+
+> 进关卡 → 打敌人（会追、会打、隔墙不开枪）→ 敌人死亡 35% 概率掉饰品 → 走过去捡 → 属性变强 → 受击敌人显示血条 3 秒。
+
+**三个断层**：玩家看不见自己装了什么 / 一局没有终点 / 死了没有结算重开。
 
 **已完成但不在原清单里的东西：**
 
-- 属性集拆分：`UMyAttributeSet`（基础 4 个）+ `UResourceSet`（玩家专属 11 个）
+- 属性集拆分：`UMyAttributeSet`（基础 4 个）+ `UResourceSet`（玩家专属 16 个）
 - `AWeaponBase`：武器持有能力数组，装备/卸下时授予/移除到 Owner 的 ASC
 - 三层伤害数值模型：武器基础值（DA）+ 玩家倍率属性（ResourceSet）+ 全局倍率（占位 ×1.0）
-- `GetFinalStats` / `CalculateFinalDamage` 拆分
+- `GetFinalStats` / `CalculateFinalDamage` 已挪到 C++（`AWeaponBase`，返回 `TArray<float>`：`[0]` 伤害 `[1]` 暴击率 `[2]` 暴击倍率）
+- Character 拆成 Base / Player / Enemy 三层：`ARushBattlePlayerCharacter` / `ARushBattleEnemyCharacter`
+- `InitStats` 数据资产驱动初始属性（`UCharacterInitStats` / `UPlayerInitStats`），蓝图可换、不重编译
+- 饰品掉落全链路：`UTrinketPoolDataAsset::Roll` → `ULootTableDataAsset` → `ULootSubSystem`（`UWorldSubsystem`）→ `ATrinketPickup`
+- 敌人视线检测：`BTS_CheckLineOfSight` 写黑板 `bHasLineOfSight`，行为树装饰器决定是否进入攻击分支
+- 敌人血条：默认隐藏，受击显示 3 秒，重复受击重置（`Retriggerable Delay`）
 - `BTS_FaceToTarget`：敌人持续转向（0.05s）
 - 性能观测方法：PIE 里测 Slate 会混入编辑器 UI，必须用 `-game` / Standalone
+
+---
+
+## 排期（2026-11 起）
+
+**按"能演示"倒推，不按清单顺序做。**
+
+### 第一批：能看（约 3 天）
+
+```
+10.1   PlayerController + 准星        ← 先验证创建流程
+10.2   WBP_HealthBar
+10.5   WBP_HUD 容器（删旧 MainUI）
+10.3   WBP_AmmoPanel
+10.4   WBP_TrinketBar                 ← 做完玩家终于"看得见"饰品
+```
+
+**做完的标志**：录一段 10 秒视频，别人能看懂"你在打怪、捡东西、变强"。
+
+### 第二批：能玩一局（约 5 天）
+
+```
+5     波次系统（清完一波刷下一波，10 波通关）
+10.6  暂停菜单 + 死亡结算 + 重开
+9     关卡流程（GameMode / GameState 状态机）
+内容   补齐 10 条饰品，加入 2~3 条负面效果做取舍
+```
+
+**做完的标志**：能完整打一局，死了能重开，状态不残留。
+
+### 第三批：能讲故事（约 1 周）
+
+```
+12    压力测试场景（干净空场景 + 一键拉 N 个敌人）
+13    性能优化 + 数据对比（至少 1 个完整的"发现→定位→解决"案例）
+E     文档收尾（DevLog 补齐、README、演示 GIF）
+```
+
+**做完的标志**：简历上有"帧率从 A 优化到 B，原因是什么"的具体故事。
+
+### 暂不做（明确排除，避免分心）
+
+```
+投掷 / 锁定攻击（6.6 剩余）
+多角色 / 多武器类型
+商店 / 奖励房
+Steam 接入 / 存档系统
+```
 
 ---
 
@@ -553,17 +612,19 @@ GE 的 Duration Policy 必须是 Infinite
 
 ---
 
-# 阶段二：肉鸽循环　**← 暂缓**
+# 阶段二：肉鸽循环　**← 主体完成，待补内容**
 
 > **打完这一阶段才算「是肉鸽」。** 前 7 项只是射击游戏。
 
-**暂缓原因**：玩法设计还没定。当前方向是「敌人类型 ↔ 玩家资源」，但细节（资源上限、溢出、消耗端）要先想清楚。
+**原暂缓原因（保留）**：玩法设计还没定。当前方向是「敌人类型 ↔ 玩家资源」，但细节（资源上限、溢出、消耗端）要先想清楚。
+
+**2026-11 现状**：设计已定（掉落式、6 槽、无限叠），全链路跑通。剩内容量（饰品条数）和触发点扩展。
 
 ## [~] 8. 肉鸽核心循环
 
 > **2026-11 进展**：方案已从「三选一」改为「**掉落在地上，走过去拾取**」。
-> 地基（饰品数据结构 + 组件 + GE 施加/移除）已完成，见 **6.7**。
-> 剩余：抽取 → 掉落表 → 掉落物 → 触发点。
+> 全链路已打通：`Roll` → `LootTableDataAsset` → `ULootSubSystem` → `ATrinketPickup` → `EquipTrinket`。
+> 敌人死亡 35% 概率掉落（`BP_EnemyBase` 的 `Drop Chance` + `Loot Table`）。
 
 **要做的事**：
 - [x] 饰品数据结构（`UTrinketDataAsset` / `UTrinketPoolDataAsset`）
@@ -572,9 +633,12 @@ GE 的 Duration Policy 必须是 Infinite
 - [x] 从池子随机抽取（`Roll` / `RollOne`）
 - [x] 掉落表（池子 + 数量范围 + 散布）
 - [x] 地面掉落物 + 拾取
-- [ ] 触发点：关卡结束 / 奖励房 / 商店
-- [ ] 饰品库至少 10 条，效果有差异
+- [x] 触发点：敌人死亡掉落
+- [ ] 触发点扩展：关卡结束 / 奖励房 / 商店
+- [~] 饰品库至少 10 条，效果有差异（清单已给，按需补齐）
 - [ ] 稀有度分级影响出现概率（`Weight` 字段已留）
+- [ ] 饰品栏 UI（见第 10 项 10.4）
+- [ ] 负面效果饰品（做取舍，不是纯加数值）
 
 **GAS 迁移后，词条的实现方式变了**：
 > 词条不再"改数据资产的读取结果"，而是**施加一个 Duration / Infinite 的 GameplayEffect**。
@@ -590,9 +654,11 @@ GE 的 Duration Policy 必须是 Infinite
 
 ---
 
-# 阶段三：流程与 UI　**← 暂缓**
+# 阶段三：流程与 UI　**← 进行中（先从 UI 系统重做开始）**
 
 ## [ ] 9. 关卡流程
+
+> **排期**：等第 10 项（UI 系统）做完再做 —— 结算界面、暂停菜单都属于 UI，先有 UI 系统再做流程，不用返工。
 
 **要做的事**：
 - [ ] 开始界面 → 游戏 → 死亡结算 → 重开
@@ -610,20 +676,123 @@ GE 的 Duration Policy 必须是 Infinite
 - 逻辑全写关卡蓝图 → 换关卡就没了
 - 重开时忘了清理计时器 / 事件绑定 → 重开后行为异常
 
-## [ ] 10. 基础 UI
+## [~] 10. UI 系统（重做）　**← 当前主线**
 
-**要做的事**：
+> **2026-11 决定重做**。原来的 `WBP_MainUI` 把所有东西塞进一个 Widget：改血条要翻半天、加一个 HUD 元素要动主文件、出问题分不清是哪块坏了。
+> 改为「容器层 / 部件层 / 弹出层」三层，`PlayerController` 负责创建，数据走「0.1s Timer 轮询数值 + 事件驱动结构变化」。
+
+**原来的「要做的事」（保留）**：
 - [ ] HUD：血量、弹药、当前波次、分数
-- [ ] 升级三选一界面
+- [ ] 升级三选一界面（方案已废弃，改掉落式，见第 8 项）
 - [ ] 结算界面
 - [ ] 血条用 `ProgressBar`，**不要每帧更新**
 
-**关键概念**：
+**原来的「关键概念」（保留）**：
 - UMG 的**属性绑定（Binding）会每帧执行** → 改事件驱动
 - `Widget` 不要直接 Cast 到角色拿数据，用事件广播
 
-**验收标准**：
+### 10.0 三层结构
+
+| 层 | 职责 | 例子 |
+|---|---|---|
+| 容器层 | 只做布局，不含任何逻辑 | `WBP_HUD` |
+| 部件层 | 一个 Widget 只管一件事 | `WBP_HealthBar` / `WBP_AmmoPanel` / `WBP_TrinketBar` / `WBP_Crosshair` |
+| 弹出层 | 按需 Create / Remove，不常驻 | `WBP_PauseMenu` / `WBP_GameOver` |
+
+**拆分的好处**：改血条不碰主 UI；加 HUD 元素 = 加一个 Widget + 在容器里放一下；出问题定位快。
+
+### 10.1 归属：`PlayerController` 创建
+
+```
+BP_RushBattlePlayerController
+    BeginPlay
+        → Create Widget( WBP_HUD, Owning Player = self )
+        → Add to Viewport
+        → 存变量 HUDWidget
+```
+
+- **不用 `BP_Player` 创建**：Pawn 死了 HUD 要还在（死亡界面）
+- **不用 `AHUD` 子类**：多一层没必要
+
+### 10.2 数据来源（两条路）
+
+| 数据类型 | 方式 | 用于 |
+|---|---|---|
+| 数值（高频变化） | `Set Timer by Event(0.1, looping)` 轮询 `Get Gameplay Attribute Value` | 血量、弹药、能量、钱 |
+| 结构变化（需要索引） | 订阅 `UTrinketComponent` 的 `OnTrinketEquipped` / `OnTrinketRemoved` | 饰品栏 |
+
+- ❌ 不用 Widget **属性绑定（Binding）** —— 每帧执行
+- ❌ 不用 Widget **Tick** —— 每个 Widget 每帧都在跑蓝图 VM
+- ❌ 不用 Attribute Change 委托 —— BP 里逐个属性比较太啰嗦，0.1s 轮询对这个量级完全够
+
+### 10.3 子项清单
+
+#### [ ] 10.3.1 `BP_RushBattlePlayerController` + `WBP_Crosshair`
+
+- [ ] 新建 `BP_RushBattlePlayerController`，项目设置 → 地图和模式 → 玩家控制器类
+- [ ] 建 `WBP_Crosshair`（纯图形，不读任何数据）
+- [ ] Controller `BeginPlay`：`Create Widget` → `Add to Viewport`
+- **验证**：PIE 能看到准星 —— 先跑通「创建 → 显示」这条路
+
+#### [ ] 10.3.2 `WBP_HealthBar`
+
+- [ ] `ProgressBar` + 文本 `Cur/Max`
+- [ ] `Event Construct` 起 0.1s Timer
+- [ ] 数据：`UMyAttributeSet` 的 `Health` / `MaxHealth`
+- **验证**：受伤后进度条和数字同步变化
+
+#### [ ] 10.3.3 `WBP_AmmoPanel`
+
+- [ ] 弹药 / 能量 / 钱 三个数值
+- [ ] 数据：`UResourceSet` 的 `Ammo` / `MaxAmmo` / `Energy` / `MaxEnergy` / `Money`
+- **验证**：开枪、换弹、捡资源点都对得上
+
+#### [ ] 10.3.4 `WBP_TrinketBar`
+
+- [ ] 6 个槽（空槽虚线框，有饰品显示 `Icon`）
+- [ ] `Event Construct` 绑 `OnTrinketEquipped` / `OnTrinketRemoved`
+- [ ] **必须用事件** —— 需要「哪个槽变了」的信息
+- **验证**：捡饰品立刻出现，`ClearAllTrinkets` 后立刻清空
+
+#### [ ] 10.3.5 `WBP_HUD`（容器）
+
+- [ ] `Canvas Panel` 摆好四个部件（血量左下 / 弹药右下 / 饰品栏底部中间 / 准星居中）
+- [ ] 自己没有任何逻辑
+- [ ] Controller 改成只创建 `WBP_HUD`
+- [ ] 删掉旧的 `WBP_MainUI`
+
+#### [ ] 10.3.6 弹出层
+
+- [ ] `WBP_PauseMenu`（Esc 打开/关闭，`Set Game Paused`）
+- [ ] `WBP_GameOver`（死亡时显示，按钮重开）
+- [ ] 用 `Create Widget` + `Add to Viewport`，关闭时 `Remove from Parent`
+
+### 10.4 迁移顺序
+
+```
+10.3.1 → 验证「能显示」
+10.3.2 → 把旧 MainUI 的血量部分搬过来
+10.3.5 → 建容器，把准星 + 血量放进去，删旧 MainUI
+10.3.3 → 弹药迁过来
+10.3.4 → 饰品栏
+10.3.6 → 弹出层
+```
+
+**每迁一个就提交一次。**
+
+### 10.5 验收标准
+
 > UI 数据始终准确；打开 `stat game` 时 UI 没有明显的每帧开销。
+
+**补充**：加一个 HUD 元素只需改 `WBP_HUD` 的布局 + 新建一个 Widget，不动其他代码。
+
+### 10.6 常见坑
+
+- Widget 里 `Cast To BP_Player` → 改成 `Get Owning Player → Get Pawn → Cast To ARushBattlePlayerCharacter`（C++ 基类，换蓝图子类不用改 UI）
+- 用 `Create Widget` 创建常驻子部件 → 直接在设计器里把子 Widget 拖进 `Canvas Panel`（随父自动创建/销毁）
+- Widget 用 `Event Tick` 轮询 → 改 Timer 或事件
+- 血条用 `Binding` → 每帧执行
+- 旧的 `WBP_MainUI` 留着当参考 → 会有人误改，迁完尽早删
 
 ---
 
@@ -1209,14 +1378,25 @@ AIC_Enemy → 行为树
 | `EnemyTag` 没有任何逻辑读它 | ✅ `OnKilledEnemy` → `EnemyTag` → 加资源点 |
 | Ammo 在 `BP_GunBase` 上 | ✅ 已迁到 `UResourceSet` |
 
-### 🔴 当前 P0：饰品掉落链路
+### ✅ 已解决：饰品掉落链路（保留记录）
+
+| 原缺口 | 现状 |
+|---|---|
+| 没有 `Roll` / `RollOne` | ✅ `UTrinketPoolDataAsset` 已实现 |
+| 没有掉落表 | ✅ `ULootTableDataAsset` |
+| 没有地面掉落物 | ✅ `ATrinketPickup` + `ULootSubSystem` |
+| 没有触发点 | ✅ 敌人死亡 35% 掉落 |
+
+### 🔴 当前 P0：UI 系统重做
 
 | # | 缺口 |
 |---|---|
-| 1 | `UTrinketPoolDataAsset` 没有 `Roll` / `RollOne` → 抽不了 |
-| 2 | 没有掉落表 → 无法配置"掉几个、从哪个池子" |
-| 3 | 没有地面掉落物 → 抽出来的东西无处可放 |
-| 4 | 没有触发点 → 关卡结束/奖励房都不会掉 |
+| 1 | `WBP_MainUI` 是一个巨型 Widget，改一处要翻半天 |
+| 2 | 没有 PlayerController 管理 HUD 生命周期 |
+| 3 | 没有饰品栏 → 玩家看不见装了什么 |
+| 4 | 没有暂停 / 死亡界面 → 一局无法结束和重开 |
+
+**详见第 10 项（10.1 ~ 10.6）。**
 
 ### 🟡 P1：待清理
 
@@ -1228,16 +1408,18 @@ AIC_Enemy → 行为树
 | 8 | `Content/Code` 文件夹结构 | 按功能域重组，分批移动 + Fix Up Redirectors |
 | 9 | `Config/DefaultEngine.ini` 的 `CoreRedirects` | 迁移稳定后可删（Tinket → Trinket 残留） |
 | 10 | 测试关卡太重（160K 三角形） | 需要一个干净的空场景做压测基线 |
+| 11 | 旧的 `WBP_MainUI` | UI 迁完后删掉 |
 
 ### 🟢 P2：设计上以后要处理
 
 | # | 项目 | 什么时候 |
 |---|---|---|
-| 11 | `CurrentWeapon : BP_GunBase` 类型过窄 | 加近战 / 能量武器时 |
-| 12 | `Speed` / `MaxSpeed` 空转 | 做减速 / Buff 时接到 `MaxWalkSpeed` |
-| 13 | 三层数值模型的第三层（全局倍率） | 做"模式难度 / 角色天赋"时 |
-| 14 | `UWeaponData`（C++ 数据类） | 要把 `CalculateFinalDamage` 搬 C++ 时 |
-| 15 | 6.6 投掷 / 锁定攻击 | 设计定了以后 |
+| 12 | `CurrentWeapon : BP_GunBase` 类型过窄 | 加近战 / 能量武器时 |
+| 13 | `Speed` / `MaxSpeed` 空转 | 做减速 / Buff 时接到 `MaxWalkSpeed` |
+| 14 | 三层数值模型的第三层（全局倍率） | 做"模式难度 / 角色天赋"时 |
+| 15 | `UWeaponData`（C++ 数据类） | 武器字段超过 15 个 / 要做武器改装时 |
+| 16 | 6.6 投掷 / 锁定攻击 | 设计定了以后 |
+| 17 | `MaxXxx` 降低时不 clamp 当前值 | 做第一个"改变上限"的负面饰品时 |
 | 9 | `UMyAttributeSet` 的复制代码 | 随时可精简（单机不需要） |
 | 10 | `GE_InitStats` 只设了 Health，没设 Speed | 敌人要用 Speed 属性时补 |
 
