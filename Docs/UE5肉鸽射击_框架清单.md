@@ -31,18 +31,18 @@
 |---|---|---|---|
 | 阶段一 | 核心战斗地基 | **1~4 完成 · 5 暂停 · 6 基本完成（6.6 余投掷/锁定）· 7 部分完成** | 收尾 |
 | 阶段二 | 肉鸽循环 | **饰品 + 掉落 + 拾取全链路打通** | 待补内容 |
-| 阶段三 | 流程与 UI | **UI 系统重做中 · 关卡流程未开始** | **P0（当前主线）** |
+| 阶段三 | 流程与 UI | **UI 系统主体完成（10.3.1~10.3.7）· 弹窗层与关卡流程未开始** | **P0（当前主线：波次系统）** |
 | 跨阶段 | 手感 | 第一批完成 | — |
 | 阶段四 | 美术与音效替换 | 未开始 | 暂缓 |
 | 阶段五 | 性能优化实战 | **观测能力已建立（11 完成）· 未做优化** | P1（拿到可玩版本后开始） |
 
-**当前主线：UI 系统重做**（见第 10 项 10.1 → 10.6）
+**当前主线：波次系统**（第 5 项 —— 做完才有"一局"的边界，死亡结算和通关才有条件可判）
 
 **当前能玩到的状态：**
 
-> 进关卡 → 打敌人（会追、会打、隔墙不开枪）→ 敌人死亡 35% 概率掉饰品 → 走过去捡 → 属性变强 → 受击敌人显示血条 3 秒。
+> 进关卡 → 打敌人（会追、会打、隔墙不开枪）→ 敌人死亡 35% 概率掉饰品 → 走过去捡 → 属性变强 → 受击敌人显示血条 3 秒 → 完整 HUD（血条 / 能量 / 弹药 / 钱 / 6 个饰品槽 / 三个资源点宝石）。
 
-**三个断层**：玩家看不见自己装了什么 / 一局没有终点 / 死了没有结算重开。
+**剩两个断层**：一局没有终点（敌人一直刷）/ 死了没有结算重开。
 
 **已完成但不在原清单里的东西：**
 
@@ -56,6 +56,8 @@
 - 敌人视线检测：`BTS_CheckLineOfSight` 写黑板 `bHasLineOfSight`，行为树装饰器决定是否进入攻击分支
 - 敌人血条：默认隐藏，受击显示 3 秒，重复受击重置（`Retriggerable Delay`）
 - `BTS_FaceToTarget`：敌人持续转向（0.05s）
+- **HUD 三层结构**：`WBP_HUD`（容器）/ `WBP_HealthBar` / `WBP_AmmoPanel` / `WBP_TrinketBar` / `WBP_Crosshair`（部件）/ 弹出层待做；由 `BP_RushBattlePlayerController` 创建与持有
+- **`WBP_Gem` + `WBP_GemRow`**：宝石图标的最小单元与带对象池的列表容器（`CountCache` 命中直接返回），可复用到所有"数量可变"的 UI
 - 性能观测方法：PIE 里测 Slate 会混入编辑器 UI，必须用 `-game` / Standalone
 
 ---
@@ -64,28 +66,31 @@
 
 **按"能演示"倒推，不按清单顺序做。**
 
-### 第一批：能看（约 3 天）
+### 第一批：能看　**✅ 已完成（2026-11-13 ~ 11-15，实际约 3 天）**
 
 ```
-10.1   PlayerController + 准星        ← 先验证创建流程
-10.2   WBP_HealthBar
-10.5   WBP_HUD 容器（删旧 MainUI）
-10.3   WBP_AmmoPanel
-10.4   WBP_TrinketBar                 ← 做完玩家终于"看得见"饰品
+10.3.1   PlayerController + 准星            ✅
+10.3.2   WBP_HealthBar                      ✅
+10.3.5   WBP_HUD 容器（删旧 MainUI）         ✅
+10.3.3   WBP_AmmoPanel                      ✅
+10.3.4   WBP_TrinketBar                     ✅
+10.3.7   资源点宝石 WBP_Gem + WBP_GemRow     ✅（追加项）
 ```
 
-**做完的标志**：录一段 10 秒视频，别人能看懂"你在打怪、捡东西、变强"。
+**做完的标志**：录一段 10 秒视频，别人能看懂"你在打怪、捡东西、变强"。 ✅
 
-### 第二批：能玩一局（约 5 天）
+### 第二批：能玩一局（约 5 天）　**← 当前**
 
 ```
-5     波次系统（清完一波刷下一波，10 波通关）
-10.6  暂停菜单 + 死亡结算 + 重开
-9     关卡流程（GameMode / GameState 状态机）
-内容   补齐 10 条饰品，加入 2~3 条负面效果做取舍
+5      波次系统（清完一波刷下一波，10 波通关）      ← 主线，先做
+10.3.6 暂停菜单 + 死亡结算 + 重开
+9      关卡流程（GameMode / GameState 状态机）
+内容    补齐 10 条饰品，加入 2~3 条负面效果做取舍
 ```
 
 **做完的标志**：能完整打一局，死了能重开，状态不残留。
+
+**顺序理由**：波次是地基 —— 没有它，死亡结算不知道显示"第几波"，通关也没有条件可判。
 
 ### 第三批：能讲故事（约 1 周）
 
@@ -96,6 +101,19 @@ E     文档收尾（DevLog 补齐、README、演示 GIF）
 ```
 
 **做完的标志**：简历上有"帧率从 A 优化到 B，原因是什么"的具体故事。
+
+### 第四批：联机能力（约 4 周）　**← 阶段六，求职向**
+
+```
+6-N.1  概念地图（先想通再看代码）
+6-N.2  第 1 周：最小联机跑通（2 人 PIE + 一个复制变量）
+6-N.3  第 2 周：属性复制 + Server RPC（DealDamageTo 拆分）
+6-N.4  第 3 周：GAS 网络（ReplicationMode / GameplayCue / PredictionKey）
+6-N.5  第 4 周：200ms 延迟调试 + 写坑文档
+平行   算法复健（419 题基础，4 周保持手感）
+```
+
+**做完的标志**：面试能讲"联机的话我会怎么改"，而不是"没做过"。
 
 ### 暂不做（明确排除，避免分心）
 
@@ -272,9 +290,11 @@ SA_EnemySpawn3D（刷怪点）
 
 ---
 
-## [~] 5. 生成系统（波次 + 难度曲线）　**← 暂停**
+## [~] 5. 生成系统（波次 + 难度曲线）　**← 当前主线（2026-11 恢复）**
 
-**暂停原因**：先把 GAS 和项目结构理顺，再回来做玩法。
+**原暂停原因（保留）**：先把 GAS 和项目结构理顺，再回来做玩法。
+
+**恢复原因**：GAS、饰品、UI 都已完成，剩下的核心缺口就是"一局没有边界"。
 
 **要做的事**：
 - [ ] 波次管理器：按波生成，波与波之间有间隔
@@ -676,7 +696,7 @@ GE 的 Duration Policy 必须是 Infinite
 - 逻辑全写关卡蓝图 → 换关卡就没了
 - 重开时忘了清理计时器 / 事件绑定 → 重开后行为异常
 
-## [~] 10. UI 系统（重做）　**← 当前主线**
+## [~] 10. UI 系统（重做）　**← 主体完成（10.3.1~10.3.5、10.3.7），弹窗层待做（10.3.6）**
 
 > **2026-11 决定重做**。原来的 `WBP_MainUI` 把所有东西塞进一个 Widget：改血条要翻半天、加一个 HUD 元素要动主文件、出问题分不清是哪块坏了。
 > 改为「容器层 / 部件层 / 弹出层」三层，`PlayerController` 负责创建，数据走「0.1s Timer 轮询数值 + 事件驱动结构变化」。
@@ -727,45 +747,59 @@ BP_RushBattlePlayerController
 
 ### 10.3 子项清单
 
-#### [ ] 10.3.1 `BP_RushBattlePlayerController` + `WBP_Crosshair`
+#### [x] 10.3.1 `BP_RushBattlePlayerController` + `WBP_Crosshair`
 
-- [ ] 新建 `BP_RushBattlePlayerController`，项目设置 → 地图和模式 → 玩家控制器类
-- [ ] 建 `WBP_Crosshair`（纯图形，不读任何数据）
-- [ ] Controller `BeginPlay`：`Create Widget` → `Add to Viewport`
+- [x] 新建 `BP_RushBattlePlayerController`，项目设置 → 地图和模式 → 玩家控制器类
+- [x] 建 `WBP_Crosshair`（纯图形，不读任何数据）
+- [x] Controller `BeginPlay`：`Create Widget` → `Add to Viewport`
 - **验证**：PIE 能看到准星 —— 先跑通「创建 → 显示」这条路
 
-#### [ ] 10.3.2 `WBP_HealthBar`
+#### [x] 10.3.2 `WBP_HealthBar`
 
-- [ ] `ProgressBar` + 文本 `Cur/Max`
-- [ ] `Event Construct` 起 0.1s Timer
-- [ ] 数据：`UMyAttributeSet` 的 `Health` / `MaxHealth`
+- [x] `ProgressBar` + 文本 `Cur/Max`
+- [x] `Event Construct` 起 0.1s Timer
+- [x] 数据：`UMyAttributeSet` 的 `Health` / `MaxHealth`
 - **验证**：受伤后进度条和数字同步变化
 
-#### [ ] 10.3.3 `WBP_AmmoPanel`
+#### [x] 10.3.3 `WBP_AmmoPanel`
 
-- [ ] 弹药 / 能量 / 钱 三个数值
-- [ ] 数据：`UResourceSet` 的 `Ammo` / `MaxAmmo` / `Energy` / `MaxEnergy` / `Money`
+- [x] 弹药 / 能量 / 钱 三个数值
+- [x] 数据：`UResourceSet` 的 `Ammo` / `MaxAmmo` / `Energy` / `MaxEnergy` / `Money`
 - **验证**：开枪、换弹、捡资源点都对得上
 
-#### [ ] 10.3.4 `WBP_TrinketBar`
+#### [x] 10.3.4 `WBP_TrinketBar`
 
-- [ ] 6 个槽（空槽虚线框，有饰品显示 `Icon`）
-- [ ] `Event Construct` 绑 `OnTrinketEquipped` / `OnTrinketRemoved`
-- [ ] **必须用事件** —— 需要「哪个槽变了」的信息
+- [x] 6 个槽（空槽虚线框，有饰品显示 `Icon`）
+- [x] `Event Construct` 绑 `OnTrinketEquipped` / `OnTrinketRemoved`
+- [x] **必须用事件** —— 需要「哪个槽变了」的信息
 - **验证**：捡饰品立刻出现，`ClearAllTrinkets` 后立刻清空
 
-#### [ ] 10.3.5 `WBP_HUD`（容器）
+#### [x] 10.3.5 `WBP_HUD`（容器）
 
-- [ ] `Canvas Panel` 摆好四个部件（血量左下 / 弹药右下 / 饰品栏底部中间 / 准星居中）
-- [ ] 自己没有任何逻辑
-- [ ] Controller 改成只创建 `WBP_HUD`
-- [ ] 删掉旧的 `WBP_MainUI`
+- [x] `Canvas Panel` 摆好四个部件（血量左下 / 弹药右下 / 饰品栏底部中间 / 准星居中）
+- [x] 自己没有任何逻辑
+- [x] Controller 改成只创建 `WBP_HUD`
+- [x] 删掉旧的 `WBP_MainUI`
 
 #### [ ] 10.3.6 弹出层
 
 - [ ] `WBP_PauseMenu`（Esc 打开/关闭，`Set Game Paused`）
 - [ ] `WBP_GameOver`（死亡时显示，按钮重开）
 - [ ] 用 `Create Widget` + `Add to Viewport`，关闭时 `Remove from Parent`
+
+> **排期**：和第 9 项（关卡流程）一起做 —— 结算界面依赖"这一局结束了"这个状态。
+
+#### [x] 10.3.7 资源点宝石（`WBP_Gem` + `WBP_GemRow`）
+
+> 2026-11 追加。原来资源点只显示数字，改成"一颗颗宝石"。
+
+- [x] `WBP_Gem`：`SizeBox` + `Image`，两个函数 `SetGem(Tex, Size)` / `SetGemSize(Size)`
+- [x] `WBP_GemRow`：内部维护 `WBP_Gem` 池 + `CountCache`，数量不变直接返回
+- [x] `WBP_ResourceSet_T` 用三个 `WBP_GemRow` 显示生命点 / 弹药点 / 能量点
+- [x] 三色：生命红 / 弹药黄 / 能量青，形状也区分（色盲友好）
+- **验证**：数量变化时宝石跟着增减，多余的不占位（`Collapsed`），数量不变时零创建开销
+
+**这个"池子 + 数量缓存"的模式可以直接复用到**：弹药图标、护盾格、任务进度点、连击数、波次进度。
 
 ### 10.4 迁移顺序
 
@@ -793,6 +827,17 @@ BP_RushBattlePlayerController
 - Widget 用 `Event Tick` 轮询 → 改 Timer 或事件
 - 血条用 `Binding` → 每帧执行
 - 旧的 `WBP_MainUI` 留着当参考 → 会有人误改，迁完尽早删
+
+**2026-11 实做时踩到的（补充）：**
+
+- **`Set Desired Size Override` 对 `UImage` 无效** —— `UImage` 的尺寸来自 `Brush.ImageSize`，`SImage::ComputeDesiredSize()` 不看 `UWidget` 的 `DesiredSizeOverride`。想动态改尺寸必须用 `SizeBox` 的 `SetWidthOverride` / `SetHeightOverride`
+- **`Construct Object from Class` vs `Create Widget`** —— `UserWidget` 必须用 `Create Widget`（它要 `Initialize` + 建立 `WidgetTree`）；`UImage` 这类裸控件只能用 `Construct Object from Class`，而且它不出现在 `Create Widget` 的类列表里
+- **`Add Child` 的 `Content` 要实例，不是类** —— 引脚显示「选择资产」时说明你给的是类或 None，下拉框里永远空（Widget 实例是运行时才有的）
+- **Image 没有 Brush → DesiredSize 是 0** —— `Add Child` 进去了也看不见，先 Print `Get Desired Size` 确认
+- **`SizeBox` 的 `Width/Height Override` 前面必须勾上** —— 只填数值不勾，等于没设
+- **`Canvas Panel Slot` 的 `尺寸X/Y` 不要手填** —— 勾「尺寸到内容（Auto Size）」，尺寸由子 Widget 的 `DesiredSize` 决定，DPI 缩放只负责整体放大
+- **槽位变量不要手动建** —— 在設計器里勾「是变量」生成，手建的永远是 `None`
+- **资产目录**：`Content/Code/Core/UI/` 放所有 `WBP_*`；`Content/Code/Core/Icons/` 只放纹理（`T_*`）。混放会导致找东西时先看错类型
 
 ---
 
@@ -958,6 +1003,151 @@ BP_RushBattlePlayerController
 | 5 | **money 是不是该单独一层？** | 它是成长货币，不是战斗资源 |
 
 **参考**：《DOOM Eternal》（不同击杀方式给不同资源）、[The aggressive resource management of Doom Eternal](https://www.gamedeveloper.com/design/the-aggressive-resource-management-of-i-doom-eternal-i-)。
+
+---
+
+# 阶段六：联机能力（求职向）　**← 项目收口后开始**
+
+> **这一阶段的目标不是让游戏变好，是让简历从"单机 Demo"变成"有工程经验"。**
+> 国内客户端岗的 JD 里几乎没有不提网络的。单机项目在面试里最容易被问死的一句是：「你这个联机的话会怎么改？」
+
+**前置条件**：第二批（能玩一局）完成之后再开始，不要和波次/结算混着做。
+
+## 6-N.1 概念地图（8 个，先想通再看代码）
+
+```text
+① 权威服务器        只有服务器算数，客户端只是"请求 + 显示"
+② 属性复制          UPROPERTY(Replicated) + GetLifetimeReplicatedProps
+③ OnRep_XXX        客户端收到复制后的回调（表现层放这里）
+④ RPC               Server（客户端请求服务器）/ Client（服务器调某客户端）/
+                     NetMulticast（服务器调所有客户端）
+⑤ 客户端预测        本地先执行，不等服务器确认（移动、开火）
+⑥ Rollback          预测错了，服务器回声后回滚重演
+⑦ 平滑/插值         远端玩家位置不能瞬移，要插值
+⑧ 相关性 Relevancy  只复制"附近"的 Actor，远了不占带宽
+```
+
+**入门推荐**：搜「Gabriel Gambetta client server game architecture」，他关于预测/回滚/插值的四篇文章比 UE 文档更讲得通。
+
+**UE 官方入口**：[Property Replication in Unreal Engine](https://dev.epicgames.com/documentation/unreal-engine/property-replication-in-unreal-engine)
+
+## 6-N.2 四周计划
+
+### 第 1 周：最小联机跑通
+
+```text
+① PIE → 多人游戏 → 玩家数量 = 2
+② 确认两个角色都能动
+③ 用一个测试 Actor（球）加 UPROPERTY(Replicated) 的 float
+④ 服务器改值，客户端 Print 出来
+```
+
+**验收**：客户端能看到服务器改的值；客户端改值会被服务器覆盖。
+
+### 第 2 周：属性复制 + RPC
+
+```text
+① ARushBattleCharacter 加 GetLifetimeReplicatedProps
+② 检查 UMyAttributeSet 的 DOREPLIFETIME 是否全
+③ DealDamageTo 拆成：客户端只做射线 + 表现，服务器真正施加 GE（Server RPC）
+④ 加 OnRep_Health，客户端刷血条
+```
+
+**验收**：客户端开枪 → 服务器扣血 → 两边一致；200ms 延迟下血条有延迟但不回跳。
+
+### 第 3 周：GAS 的网络部分（最难的）
+
+```text
+① 吃透 ASC 的三种 ReplicationMode（Full / Mixed / Minimal）
+② 搞清楚为什么 GE 对 SimulatedProxy 不复制 → 表现必须走 GameplayCue
+③ 给伤害/死亡加 GameplayCue
+④ 饰品 Infinite GE：服务器施加，靠属性复制影响客户端
+⑤ 简单用 PredictionKey（开火、换弹）
+```
+
+**验收**：联机下打死敌人两边都播表现；捡饰品后两边伤害数字一致；换弹不会"弹匣跳回去"。
+
+### 第 4 周：延迟、调试、文档
+
+```text
+① PIE 网络模拟：延迟 200ms / 丢包 5%
+② 处理手感：开火反馈要不要本地预测
+③ stat net / net.PktLag / PackageMap
+④ 写一份「从单机到联机踩了哪些坑」
+```
+
+**验收**：200ms 下"能玩"（不是"能跑"）；有一份 5~10 条的坑列表。
+
+## 6-N.3 在现有代码上的改造清单
+
+**已经联机友好的部分（改造量比从零小）：**
+
+```text
+✅ UMyAttributeSet 已有 ReplicatedUsing + DOREPLIFETIME_CONDITION_NOTIFY
+✅ ASC 的 ReplicationMode 已设 Mixed
+✅ Character 三层拆分清晰
+```
+
+**必须改的：**
+
+```text
+□ ARushBattleCharacter::GetLifetimeReplicatedProps（LastDamageInstigator 等）
+□ DealDamageTo → Server RPC 版本
+□ UResourceSet → 加 COND_OwnerOnly 复制
+□ ULootSubSystem::SpawnFromTable → 加 HasAuthority 检查
+□ ATrinketPickup 的拾取 → Server RPC
+□ UTrinketComponent::EquipTrinket → 只在服务器调
+□ BP_EnemyBase 死亡掉落 → 加 HasAuthority
+□ 开火表现本地预测，扣弹 + 伤害走服务器
+```
+
+**提前知道的坑：**
+
+```text
+· 客户端 SpawnActor 出来的东西不会自动复制
+· 客户端改属性会被服务器下一帧覆盖
+· SimulatedProxy 上的 GE 不执行 → 必须用 Cue
+· Widget 在客户端、数据在服务器 → 只能靠属性复制拿
+· PIE 单人测试暴露不了任何网络问题 → 必须开 2 人
+```
+
+## 6-N.4 面试时能讲的七条
+
+```text
+① 为什么用权威服务器而不是客户端权威
+② COND_ 有哪些，什么时候用哪个
+③ 客户端预测解决什么问题，代价是什么
+④ GAS 三种 ReplicationMode 的区别，为什么 Mixed 是玩家常用
+⑤ 为什么 GE 对 SimulatedProxy 不复制，要用 GameplayCue
+⑥ 200ms 延迟下哪些要预测、哪些不能
+⑦ 你踩过的具体坑 ← 这条区分"看过文档"和"做过"
+```
+
+## 6-N.5 平行任务：算法复健
+
+> 已有 419 题（111 易 / 284 中 / 24 难），超过 98.7%，但半年没刷。
+
+**复健方案（4 周，每天 40~60 分钟）：**
+
+```text
+每周 3~4 次，每次 2 题，限时 25 分钟
+每周 1 次白板模拟（纸笔 / 关 IDE 补全）
+```
+
+**优先复习（按遗忘速度）：**
+
+```text
+① 动态规划（状态定义、背包、LIS、区间 DP）
+② 图论（拓扑排序、并查集、Dijkstra）
+③ 二分答案
+④ 滑动窗口 / 双指针
+⑤ 单调栈 / 单调队列
+⑥ 树的非递归遍历
+⑦ 堆 / TopK
+⑧ 前缀和 / 差分
+```
+
+**不熟的挑 20~30 题重做，比重刷 419 题高效。**
 
 ---
 
@@ -1387,16 +1577,25 @@ AIC_Enemy → 行为树
 | 没有地面掉落物 | ✅ `ATrinketPickup` + `ULootSubSystem` |
 | 没有触发点 | ✅ 敌人死亡 35% 掉落 |
 
-### 🔴 当前 P0：UI 系统重做
+### ✅ 已解决：UI 系统重做（保留记录）
+
+| 原缺口 | 现状 |
+|---|---|
+| `WBP_MainUI` 巨型 Widget | ✅ 拆成 `WBP_HUD` + 5 个部件 |
+| 没有 PlayerController 管理 HUD | ✅ `BP_RushBattlePlayerController` |
+| 没有饰品栏 | ✅ `WBP_TrinketBar`（6 槽 + 事件驱动） |
+| 没有资源点显示 | ✅ `WBP_Gem` + `WBP_GemRow` |
+
+### 🔴 当前 P0：一局没有边界
 
 | # | 缺口 |
 |---|---|
-| 1 | `WBP_MainUI` 是一个巨型 Widget，改一处要翻半天 |
-| 2 | 没有 PlayerController 管理 HUD 生命周期 |
-| 3 | 没有饰品栏 → 玩家看不见装了什么 |
-| 4 | 没有暂停 / 死亡界面 → 一局无法结束和重开 |
+| 1 | 没有波次系统 → 敌人一直刷，没有"第几波"的概念 |
+| 2 | 没有通关条件 → 不知道什么时候算赢 |
+| 3 | 没有死亡结算 / 重开 → 一局无法结束 |
+| 4 | 没有暂停菜单 |
 
-**详见第 10 项（10.1 ~ 10.6）。**
+**详见第 5 项（波次）+ 第 9 项（关卡流程）+ 10.3.6（弹窗层）。**
 
 ### 🟡 P1：待清理
 
