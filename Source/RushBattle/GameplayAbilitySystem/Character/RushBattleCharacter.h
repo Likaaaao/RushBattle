@@ -71,6 +71,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Init")
 	virtual void ApplyInitStats();
 
+
 	UFUNCTION(BlueprintCallable, Category = "Init")
 	void ApplyInitStatsWith(UCharacterInitStats* NewStats);
 

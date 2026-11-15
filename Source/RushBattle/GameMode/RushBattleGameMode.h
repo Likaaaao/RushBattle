@@ -23,6 +23,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Config")
 	TObjectPtr<UWaveConfigDataAsset> WaveConfig;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Run|Spawn")
+	float SpawnRadiusMin=1500.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Run|Spawn")
+	float SpawnRadiusMax= 2500.f;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Run")
 	EWaveState WaveState= EWaveState::Idle;
 
@@ -35,11 +41,27 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Run")
 	int32 EnemiesAlive = 0;
 
+	//生成队列
+	UPROPERTY(BlueprintReadOnly, Category = "Run|Spawn")
+	TArray<int32> PendingSpawns;	
+	//生成下一个的下标
+	UPROPERTY(BlueprintReadOnly, Category = "Run|Spawn")
+	int32 SpawnCursor = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Run|Timer")
+	FTimerHandle WaveTimerHandle;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Run|Timer")
+	FTimerHandle SpawnTimerHandle;
+
+
 	UPROPERTY(BlueprintAssignable, Category = "Wave")
 	FOnWaveStateChanged OnWaveStateChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Wave")
 	FOnRunEnded OnRunEnded;
+
+
 protected:
     virtual void BeginPlay() override;
 
@@ -50,5 +72,20 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Wave")
 	void EnterState(EWaveState NewState);
 	
+	UFUNCTION(BlueprintCallable, Category = "Wave")
+	void StartWave(int32 WaveIndex);
+
+	UFUNCTION(BlueprintCallable, Category = "Wave")
+	void BeginSpawning();
+
+	UFUNCTION(BlueprintCallable, Category = "Wave")
+	FVector ResolveSpawnLocation(const FWaveSpawnEntry& Entry) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Wave")
+	void SpawnOneEnemy();
+
+	UFUNCTION(BlueprintCallable, Category = "Wave")
+	void OnWaveAllSpawned();
+
 
 };
