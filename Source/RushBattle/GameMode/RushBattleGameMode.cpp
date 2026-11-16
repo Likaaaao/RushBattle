@@ -29,6 +29,7 @@ namespace
 		}
 	}
 }
+
 void ARushBattleGameMode::BeginPlay()
 {
     Super::BeginPlay();
@@ -40,6 +41,64 @@ void ARushBattleGameMode::BeginPlay()
 
 	StartRun();
 }
+void ARushBattleGameMode::CheckWaveCleared()
+{
+	int32 Alive = 0;
+
+	//get player location
+	const APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(this, 0);
+	const bool bHasPlayer = IsValid(PlayerPawn);
+	const FVector PlayerLocation = bHasPlayer
+		? PlayerPawn->GetActorLocation()
+		: FVector::ZeroVector;
+
+	for (const TWeakObjectPtr<ARushBattleEnemyCharacter>& enemy : SpawnedEnemies) {
+		if (enemy.IsValid()) {
+
+			const float DistSq = FVector::Dist(
+				enemy->GetActorLocation(),
+				PlayerLocation);
+
+			//MaxDistanceFromPlayer
+			if (DistSq > 10000.f) {
+				enemy->Destroy();
+				UE_LOG(LogTemp, Warning, TEXT("[Wave] Distince too far, Destroy Enemy: %.2f"),DistSq);
+				continue;
+			}
+			Alive++;
+		}
+
+	}
+	EnemiesAlive = Alive;
+	if (Alive > 0) {
+		return;
+	}
+	GetWorldTimerManager().ClearTimer(CheckClearTimerHandle);
+	OnWaveCleared();
+
+}
+void ARushBattleGameMode::StartNextWave()
+{
+	StartWave(CurrentWaveIndex+1);
+}
+
+void ARushBattleGameMode::OnWaveCleared()
+{
+	const float Interval = WaveConfig ? WaveConfig->WaveInterval : 3.f;
+
+	UE_LOG(LogTemp, Warning, TEXT("[Wave] Wave %d cleared, next in %.2f"),
+		CurrentWaveIndex, Interval);
+
+	EnterState(EWaveState::WaveCleared);
+
+	GetWorldTimerManager().SetTimer(
+		WaveTimerHandle,
+		this,
+		&ARushBattleGameMode::StartNextWave,
+		Interval,
+		false);
+}
+
 
 void ARushBattleGameMode::StartRun()
 {
@@ -73,9 +132,13 @@ void ARushBattleGameMode::StartWave(int32 WaveIndex)
 		OnRunEnded.Broadcast(true);
 		return;
 	}
+	//updata CurrentWaveIndex 
 	CurrentWaveIndex = WaveIndex;
+
 	GetWorldTimerManager().ClearTimer(WaveTimerHandle);
-	GetWorldTimerManager().ClearTimer(SpawnTimerHandle);
+	GetWorldTimerManager().ClearTimer(SpawnTimerHandle); 
+	GetWorldTimerManager().ClearTimer(CheckClearTimerHandle);  
+	SpawnedEnemies.Reset();
 
 	const FWaveDefinition& Definition = WaveConfig->Waves[WaveIndex];
 	PendingSpawns.Reset();
@@ -195,6 +258,7 @@ void ARushBattleGameMode::SpawnOneEnemy()
 	else
 	{
         EnemiesAlive++;
+		SpawnedEnemies.Add(Enemy);
 		//check InitStats
 		if (Entry.InitStats) {
 			Enemy->ApplyInitStatsWith(Entry.InitStats);
@@ -224,4 +288,11 @@ void ARushBattleGameMode::OnWaveAllSpawned()
 		CurrentWaveIndex, EnemiesAlive);
 
 	EnterState(EWaveState::Fighting);
+
+	GetWorldTimerManager().SetTimer(
+		CheckClearTimerHandle,
+		this,
+		&ARushBattleGameMode::CheckWaveCleared,
+		0.3f,
+		true);
 }

@@ -60,7 +60,17 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Wave")
 	FOnRunEnded OnRunEnded;
+protected:
+	TArray<TWeakObjectPtr<ARushBattleEnemyCharacter>> SpawnedEnemies;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Run|Timer")
+	FTimerHandle CheckClearTimerHandle;
+
+	void CheckWaveCleared();
+
+	void StartNextWave();
+
+	void OnWaveCleared();
 
 protected:
     virtual void BeginPlay() override;
