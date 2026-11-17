@@ -11,6 +11,9 @@
 namespace
 {
 	constexpr float SpawnZOffset = 90.f;
+
+	/** 找出生点的最大尝试次数 */
+	constexpr int32 MaxSpawnAttempts = 6;
 }
 
 namespace
@@ -180,11 +183,24 @@ void ARushBattleGameMode::BeginSpawning()
 
 FVector ARushBattleGameMode::ResolveSpawnLocation(const FWaveSpawnEntry& Entry) const
 {
-	if (IsValid(Entry.SpawnPoint))
+	// spawn on tag
+	if (!Entry.SpawnPointTag.IsNone())
 	{
-		return Entry.SpawnPoint->GetActorLocation() + FVector(0.f, 0.f, SpawnZOffset);
+		TArray<AActor*> Found;
+		UGameplayStatics::GetAllActorsWithTag(this, Entry.SpawnPointTag, Found);
+
+		if (Found.Num() > 0)
+		{
+			AActor* Chosen = Found[FMath::RandRange(0, Found.Num() - 1)];
+			return Chosen->GetActorLocation() + FVector(0.f, 0.f, SpawnZOffset);
+		}
+
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Wave] SpawnPointTag '%s' not found, fallback to random"),
+			*Entry.SpawnPointTag.ToString());
 	}
 
+	// spawn round player
 	const APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(this, 0);
 	if (!IsValid(PlayerPawn))
 	{
@@ -192,25 +208,43 @@ FVector ARushBattleGameMode::ResolveSpawnLocation(const FWaveSpawnEntry& Entry) 
 	}
 
 	const FVector PlayerLocation = PlayerPawn->GetActorLocation();
-	const float Angle = FMath::FRandRange(0.f, 2.f * PI);
-	const float Distance = FMath::FRandRange(
-		SpawnRadiusMin, FMath::Max(SpawnRadiusMin, SpawnRadiusMax));
 
-	FVector Desired = PlayerLocation
-		+ FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.f) * Distance;
+	const UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
 
-	if (const UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
+	const float RadiusMin = FMath::Min(SpawnRadiusMin, SpawnRadiusMax);
+	const float RadiusMax = FMath::Max(SpawnRadiusMin, SpawnRadiusMax);
+
+	for (int32 Attempt = 0; Attempt < MaxSpawnAttempts; ++Attempt)
 	{
-		FNavLocation NavLocation;
-		const FVector QueryExtent(500.f, 500.f, 500.f);
-		if (NavSys->ProjectPointToNavigation(Desired, NavLocation, QueryExtent))
+		const float Angle = FMath::FRandRange(0.f, 2.f * PI);
+		const float Distance = FMath::FRandRange(RadiusMin, RadiusMax);
+
+		FVector Candidate = PlayerLocation
+			+ FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.f) * Distance;
+
+		if (NavSys)
 		{
-			Desired = NavLocation.Location;
+			FNavLocation NavLocation;
+			const FVector QueryExtent(500.f, 500.f, 500.f);
+
+			if (NavSys->ProjectPointToNavigation(Candidate, NavLocation, QueryExtent))
+			{
+				return NavLocation.Location + FVector(0.f, 0.f, SpawnZOffset);
+			}
 		}
 	}
 
-	Desired.Z += SpawnZOffset;
-	return Desired;
+	// spawn on player backside
+	const float FallbackDistance = (RadiusMin + RadiusMax) * 0.5f;
+
+	FVector Behind = PlayerLocation - PlayerPawn->GetActorForwardVector() * FallbackDistance;
+	Behind.Z = PlayerLocation.Z;
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("[Wave] No NavMesh location found in %d attempts, fallback behind player: %s"),
+		MaxSpawnAttempts, *Behind.ToString());
+
+	return Behind + FVector(0.f, 0.f, SpawnZOffset);
 }
 
 void ARushBattleGameMode::SpawnOneEnemy()

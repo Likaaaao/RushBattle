@@ -24,7 +24,7 @@ struct FWaveSpawnEntry
     TObjectPtr<UCharacterInitStats> InitStats;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave")
-    TObjectPtr<AActor> SpawnPoint;
+    FName SpawnPointTag = NAME_None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave")
     int32 SpawnCount=1;
